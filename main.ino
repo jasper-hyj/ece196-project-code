@@ -31,6 +31,10 @@ void setup(){
     pinMode(in4, OUTPUT);
     pinMode(EnB, OUTPUT);
 
+    pinMode(in5, OUTPUT);
+    pinMode(in6, OUTPUT);
+    pinMode(EnC, OUTPUT);
+
     pinMode();
     pinMode();
 
