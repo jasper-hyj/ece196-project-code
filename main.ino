@@ -8,6 +8,11 @@ const unsigned int in3{34};
 const unsigned int in4{47};
 const unsigned int EnB{33};
 
+// third motor
+const unsigned int in5{12};
+const unsigned int in6{10};
+const unsigned int EnC{11};
+
 // first ultra sonic sensor
 const unsigned int trig1{26};
 const unsigned int echo1{21};
