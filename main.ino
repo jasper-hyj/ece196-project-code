@@ -1,3 +1,4 @@
+#include <Wire.h>
 // first motor
 const unsigned int in1{36};
 const unsigned int in2{48};
