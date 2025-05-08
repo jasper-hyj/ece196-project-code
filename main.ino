@@ -1,4 +1,5 @@
 #include <Wire.h>
+
 // first motor
 const unsigned int in1 = 36;
 const unsigned int in2 = 48;
@@ -23,9 +24,14 @@ const unsigned int trig2 = 37;
 const unsigned int echo2 = 38;
 
 // used for calculating distance for ultra sonic sensor
-long duration;
-float distanceCm;
+long duration1;
+float distanceCm1;
 
+long duration2;
+float distanceCm2;
+
+// what is the speed of sound?
+const unsigned int soundSpeed = 34300;
 
 void setup(){
     Serial.begin(115200);
@@ -50,6 +56,21 @@ void setup(){
 }
 
 void loop(){
+    digitalWrite(trig1, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trig1, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trig1, LOW);
 
+    digitalWrite(trig2, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trig2, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trig2, LOW);
 
+    duration1 = pulseIn(echo1, HIGH);
+    duration2 = pulseIn(echo2, HIGH);
+
+    distanceCm1 = duration1 * soundSpeed/2;
+    distanceCm2 = duration2 * soundSpeed/2;
 }
