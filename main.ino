@@ -30,9 +30,6 @@ float distanceCm1;
 long duration2;
 float distanceCm2;
 
-// what is the speed of sound?
-const unsigned int soundSpeed = 34300;
-
 void setup(){
     Serial.begin(115200);
 
@@ -71,6 +68,8 @@ void loop(){
     duration1 = pulseIn(echo1, HIGH);
     duration2 = pulseIn(echo2, HIGH);
 
+    // speed of sound 343 m/s = 0.0343 cm/µs
+    // 1 / 0.0343 = 29.15
     distanceCm1 = duration1 * soundSpeed/2;
     distanceCm2 = duration2 * soundSpeed/2;
 }
