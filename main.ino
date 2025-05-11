@@ -15,6 +15,12 @@ const unsigned int in5 = 12;
 const unsigned int in6 = 10;
 const unsigned int EnC = 11;
 
+// Setting PWM properties
+const int freq = 30000;
+const int pwmChannel = 0;
+const int resolution = 8;
+int dutyCycle = 200;
+
 // first ultra sonic sensor
 const unsigned int trig1 = 26;
 const unsigned int echo1 = 21;
@@ -44,6 +50,9 @@ void setup(){
     pinMode(in5, OUTPUT);
     pinMode(in6, OUTPUT);
     pinMode(EnC, OUTPUT);
+
+    // configure LEDC PWM
+    ledcAttachChannel(enable1Pin, freq, resolution, pwmChannel);
 
     pinMode(trig1, OUTPUT);
     pinMode(echo1, INPUT);
