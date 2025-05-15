@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <Stepper.h>
 
 // first motor
 const unsigned int in1 = 36;
@@ -21,6 +22,14 @@ const int pwmChannel = 0;
 const int resolution = 8;
 int dutyCycle = 200;
 
+// check how many steps are in one revolution or spin
+const int stepsPerRevolution = 200;
+
+// Set up the pin numbers for the stepper function
+Stepper motor1(stepsPerRevolution, 8, 9, 10, 11);
+Stepper motor2(stepsPerRevolution, 8, 9, 10, 11);
+Stepper motor2(stepsPerRevolution, 8, 9, 10, 11);
+
 // first ultra sonic sensor
 const unsigned int trig1 = 26;
 const unsigned int echo1 = 21;
@@ -38,6 +47,9 @@ float distanceCm2;
 
 void setup(){
     Serial.begin(115200);
+
+    // set the speed at 60 rpm:
+	myStepper.setSpeed(60);
 
     pinMode(in1, OUTPUT);
     pinMode(in2, OUTPUT);
@@ -81,4 +93,7 @@ void loop(){
     // 1 / 0.0343 = 29.15
     distanceCm1 = duration1 * soundSpeed/2;
     distanceCm2 = duration2 * soundSpeed/2;
+
+    // pass the number of steps you want the motor to step into the argument
+    motor1.step(stepsPerRevolution);
 }
