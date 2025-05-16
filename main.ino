@@ -74,6 +74,7 @@ void setup(){
 }
 
 void loop(){
+    // calculate all the distance sensor values
     digitalWrite(trig1, LOW);
     delayMicroseconds(2);
     digitalWrite(trig1, HIGH);
@@ -91,8 +92,8 @@ void loop(){
 
     // speed of sound 343 m/s = 0.0343 cm/µs
     // 1 / 0.0343 = 29.15
-    distanceCm1 = duration1 * soundSpeed/2;
-    distanceCm2 = duration2 * soundSpeed/2;
+    distanceCm1 = duration1 /29/2;
+    distanceCm2 = duration2 /29/2;
 
     // pass the number of steps you want the motor to step into the argument
     motor1.step(stepsPerRevolution);
