@@ -9,4 +9,5 @@ void setup() {
 
 void loop() {
   controller.update();
+  const auto& directions = controller.getDirectionMap();
 }

@@ -102,7 +102,7 @@ const char index_html[] = R"rawliteral(
     };
   </script>
 </head>
-<body>
+<body style="user-select: none;">
   <h1>ESP32 Touch Controller</h1>
   <div class="controller">
     <div></div>

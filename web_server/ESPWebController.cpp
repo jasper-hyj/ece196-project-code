@@ -1,11 +1,17 @@
 #include "ESPWebController.h"
 #include "index_html.h"
+#include <map>
 
 ESPWebController* ESPWebController::instance = nullptr;
 
 ESPWebController::ESPWebController()
   : server(80), webSocket(81) {
   instance = this;
+
+  direction[Direction::UP] = false;
+  direction[Direction::DOWN] = false;
+  direction[Direction::LEFT] = false;
+  direction[Direction::RIGHT] = false;
 }
 
 void ESPWebController::begin() {
@@ -45,8 +51,30 @@ void ESPWebController::handleClientRequest(WiFiClient &client) {
 }
 
 void ESPWebController::handleCommand(const String& cmd, const String& state) {
-  Serial.printf("Command: %s | State: %s\n", cmd.c_str(), state.c_str());
-  // Your logic here
+  // Serial.printf("Command: %s | State: %s\n", cmd.c_str(), state.c_str());
+  bool boolState = (strcmp(state.c_str(), "press") == 0);
+
+  switch (getDirectionEnum(cmd.c_str())) {
+    case Direction::UP: {
+      this->direction[Direction::UP] = boolState;
+      break;
+    }
+    case Direction::DOWN: {
+      this->direction[Direction::DOWN] = boolState;
+      break;
+    }
+    case Direction::LEFT: {
+      this->direction[Direction::LEFT] = boolState;
+      break;
+    }
+    case Direction::RIGHT: {
+      this->direction[Direction::RIGHT] = boolState;
+      break;
+    }
+    default: {
+      break;
+    }
+  }
 }
 
 void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
