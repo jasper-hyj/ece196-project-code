@@ -10,4 +10,10 @@ void setup() {
 void loop() {
   controller.update();
   const auto& directions = controller.getDirectionMap();
+
+  Serial.print("Direction states: ");
+  for (const auto& pair : directions) {
+    Serial.printf("%s=%s ", toString(pair.first), pair.second ? "true" : "false");
+  }
+  Serial.println(); // Finish the line
 }
