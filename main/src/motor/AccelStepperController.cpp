@@ -1,67 +1,74 @@
-#ifndef DUAL_STEPPER_CONTROLLER_H
-#define DUAL_STEPPER_CONTROLLER_H
+#include <AccelStepperController.h>
+#include <cmath>
 
-#include <AccelStepper.h>
+AccelStepperController* AccelStepperController::instance = nullptr;
 
-class AccelStepperController {
-public:
-	// Motor pin definitions
-	static constexpr int EN1_PIN   = 1;
-	static constexpr int STEP1_PIN = 2;
-	static constexpr int DIR1_PIN  = 3;
+AccelStepperController::AccelStepperController(
+    int leftEn, int leftStep, int leftDir,
+    int rightEn, int rightStep, int rightDir)
+    : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
+      stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
+      leftEn(leftEn),
+      rightEn(rightEn) {
+    instance = this;
+}
 
-	static constexpr int EN2_PIN   = 4;
-	static constexpr int STEP2_PIN = 5;
-	static constexpr int DIR2_PIN  = 6;
+void AccelStepperController::begin() {
+    // Enable motors
+    pinMode(leftEn, OUTPUT);
+    pinMode(rightEn, OUTPUT);
 
-	// Constants
-	static constexpr long STEPS_PER_REV = 1600; // 1/8 microstepping
-	static constexpr int SPEED = 1500;
-	static constexpr int ACCEL = 1000;
+    digitalWrite(leftEn, 0);
+    digitalWrite(rightEn, 0);
 
-	DualStepperController()
-		: stepper1(AccelStepper::DRIVER, STEP1_PIN, DIR1_PIN),
-		stepper2(AccelStepper::DRIVER, STEP2_PIN, DIR2_PIN) {}
+    // Stepper setup
+    stepperLeft.setMaxSpeed(MAX_SPEED);
+    stepperLeft.setAcceleration(ACCEL);
+    stepperLeft.setCurrentPosition(0);
 
-	void begin() {
-		// Enable motors
-		pinMode(EN1_PIN, OUTPUT);
-		pinMode(EN2_PIN, OUTPUT);
-		digitalWrite(EN1_PIN, LOW);
-		digitalWrite(EN2_PIN, LOW);
+    stepperRight.setMaxSpeed(MAX_SPEED);
+    stepperRight.setAcceleration(ACCEL);
+    stepperRight.setCurrentPosition(0);
+}
 
-		// Stepper setup
-		stepper1.setMaxSpeed(SPEED);
-		stepper1.setAcceleration(ACCEL);
-		stepper1.setCurrentPosition(0);
+void AccelStepperController::move(Direction direction) {
+    
+}
 
-		stepper2.setMaxSpeed(SPEED);
-		stepper2.setAcceleration(ACCEL);
-		stepper2.setCurrentPosition(0);
-	}
+void AccelStepperController::moveToPosition(double x, double y) {
 
-	void moveForwardOneRevolution() {
-		stepper1.moveTo(10 * STEPS_PER_REV);
-		stepper2.moveTo(10 * STEPS_PER_REV);
-		runBoth();
-	}
+    if (x < 0 || x > windowsWidth) {
+        x = currentX;
+    }
 
-	void moveBackToZero() {
-		stepper1.moveTo(0);
-		stepper2.moveTo(0);
-		runBoth();
-	}
+    if (y < 0) {
+        y = currentY;
+    }
 
-	void runBoth() {
-		while (stepper1.distanceToGo() != 0 || stepper2.distanceToGo() != 0) {
-		stepper1.run();
-		stepper2.run();
-		}
-	}
+    // Calculate X location
+    double leftX = x - (botwidth / 2.0);
+    double rightX = x + (botwidth / 2.0);
+    
+    // Calculate left/right length
+    double targetLeftLength = std::sqrt(std::pow(leftX, 2) + std::pow(y, 2));
+    double targetRightLength = std::sqrt(std::pow(windowsWidth - rightX, 2) + std::pow(y, 2));
 
-private:
-	AccelStepper stepper1;
-	AccelStepper stepper2;
-	};
+    // Find the length difference
+    double leftSteps = (targetLeftLength - leftLength) / MM_PER_STEP;
+    double rightSteps = (targetRightLength - rightLength) / MM_PER_STEP;
 
-#endif // DUAL_STEPPER_CONTROLLER_H
+    stepperLeft.move(leftSteps);
+    stepperRight.move(rightSteps);
+    runBoth();
+
+    currentX = x;
+    currentY = y;
+}
+
+void AccelStepperController::runBoth() {
+    while (stepperLeft.distanceToGo() != 0 || stepperRight.distanceToGo() != 0) {
+        stepperLeft.run();
+        stepperRight.run();
+    }
+}
+

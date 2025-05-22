@@ -1,25 +1,46 @@
 #ifndef ACCEL_STEPPER_CONTROLLER_H
 #define ACCEL_STEPPER_CONTROLLER_H
 
+#include <AccelStepper.h>
+
+#include "../Direction.h"
+
 class AccelStepperController {
 public:
-    // Motor pin definitions
-    static constexpr int EN1_PIN   = 1;
-    static constexpr int STEP1_PIN = 2;
-    static constexpr int DIR1_PIN  = 3;
-
-    static constexpr int EN2_PIN   = 4;
-    static constexpr int STEP2_PIN = 5;
-    static constexpr int DIR2_PIN  = 6;
-
     // Constants
-    static constexpr long STEPS_PER_REV = 1600; // 1/8 microstepping
-    static constexpr int SPEED = 1500;
+	static constexpr int MAX_SPEED = 1500;
     static constexpr int ACCEL = 1000;
 
-    AccelStepperController();
+    static constexpr int
+
+    AccelStepperController(
+        int leftEn, int leftStep, int leftDir,
+        int rightEn, int rightStep, int rightDir);
+
+    void begin();
+    
+    void move(Direction direction);
+
+    void moveToPosition(double x, double y);
+    void stop();
 
 private:
+    int leftEn;
+    int rightEn;
+
     AccelStepper stepperLeft;
     AccelStepper stepperRight;
+
+	int MM_PER_STEP;
+
+	double windowsWidth;
+	double botWidth;
+
+    double leftLength = 0;
+    double rightLength = 0;
+
+    double currentX = 0;
+    double currentY = 0;
+
+    void runBoth();
 }
