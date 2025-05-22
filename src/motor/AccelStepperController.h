@@ -11,8 +11,6 @@ public:
 	static constexpr int MAX_SPEED = 1500;
     static constexpr int ACCEL = 1000;
 
-    static constexpr int
-
     AccelStepperController(
         int leftEn, int leftStep, int leftDir,
         int rightEn, int rightStep, int rightDir);
@@ -25,6 +23,7 @@ public:
     void stop();
 
 private:
+    static AccelStepperController* instance;
     int leftEn;
     int rightEn;
 
@@ -43,4 +42,6 @@ private:
     double currentY = 0;
 
     void runBoth();
-}
+};
+
+#endif

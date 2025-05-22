@@ -1,4 +1,4 @@
-#include <AccelStepperController.h>
+#include "AccelStepperController.h"
 #include <cmath>
 
 AccelStepperController* AccelStepperController::instance = nullptr;
@@ -46,8 +46,8 @@ void AccelStepperController::moveToPosition(double x, double y) {
     }
 
     // Calculate X location
-    double leftX = x - (botwidth / 2.0);
-    double rightX = x + (botwidth / 2.0);
+    double leftX = x - (botWidth / 2.0);
+    double rightX = x + (botWidth / 2.0);
     
     // Calculate left/right length
     double targetLeftLength = std::sqrt(std::pow(leftX, 2) + std::pow(y, 2));
