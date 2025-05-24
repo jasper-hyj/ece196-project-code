@@ -8,14 +8,26 @@
 class AccelStepperController {
 public:
     // Constants
+    static constexpr int STEPS_PER_REV = 1600; // 1/8 microstepping
 	static constexpr int MAX_SPEED = 1500;
     static constexpr int ACCEL = 1000;
+    static constexpr int MM_PER_REV = 20;
 
     AccelStepperController(
         int leftEn, int leftStep, int leftDir,
-        int rightEn, int rightStep, int rightDir);
+        int rightEn, int rightStep, int rightDir,
+        double windowsWidth, double botWidth
+    );
 
     void begin();
+
+    double getCurrentX();
+
+    double getCurrentY();
+
+    double getCurrentLeftLength();
+
+    double getCurrentRightLength();
     
     void move(Direction direction);
 
@@ -29,8 +41,6 @@ private:
 
     AccelStepper stepperLeft;
     AccelStepper stepperRight;
-
-	int MM_PER_STEP;
 
 	double windowsWidth;
 	double botWidth;
