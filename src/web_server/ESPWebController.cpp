@@ -1,18 +1,11 @@
 #include "ESPWebController.h"
 
-#include <ArduinoJson.h>
-
 #include "index_html.h"
 
 ESPWebController* ESPWebController::instance = nullptr;
 
 ESPWebController::ESPWebController() {
     instance = this;
-
-    direction[Direction::UP] = false;
-    direction[Direction::DOWN] = false;
-    direction[Direction::LEFT] = false;
-    direction[Direction::RIGHT] = false;
 }
 
 void ESPWebController::begin() {
@@ -51,74 +44,42 @@ void ESPWebController::handleClientRequest(WiFiClient& client) {
     }
 }
 
-void ESPWebController::handleCommand(const String& cmd, const String& state) {
-    // Serial.printf("Command: %s | State: %s\n", cmd.c_str(), state.c_str());
-    bool boolState = (strcmp(state.c_str(), "press") == 0);
-
-    switch (getDirectionEnum(cmd.c_str())) {
-        case Direction::UP: {
-            this->direction[Direction::UP] = boolState;
-            break;
-        }
-        case Direction::DOWN: {
-            this->direction[Direction::DOWN] = boolState;
-            break;
-        }
-        case Direction::LEFT: {
-            this->direction[Direction::LEFT] = boolState;
-            break;
-        }
-        case Direction::RIGHT: {
-            this->direction[Direction::RIGHT] = boolState;
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
 void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     if (type == WStype_TEXT && instance) {
         String json = (char*)payload;
 
-        StaticJsonDocument<200> doc;
-        DeserializationError error = deserializeJson(doc, json);
-        if (error) {
-            Serial.println("Failed to parse WebSocket JSON");
-            return;
-        }
+        JsonDocument doc;
+        deserializeJson(doc, json);
+        EventType eventType = getEventTypeEnum(doc["type"]);
 
-        if (doc.containsKey("type") && doc["type"] == "init" && doc.containsKey("width")) {
-            int width = doc["width"];
-            Serial.printf("Received window width: %d mm\n", width);
-            if (instance->onInitWidth) {
-                instance->onInitWidth(width);
+        switch (eventType) {
+            case EventType::INIT: {
+                int width = doc["width"];
+                Serial.printf("Received window width: %d mm\n", width);
+                if (instance->onInit) {
+                    instance->onInit(width);
+                }
+                break;
             }
-            return;
-        }
 
-        if (doc.containsKey("x") && doc.containsKey("y")) {
-            int x = doc["x"];
-            int y = doc["y"];
-            Serial.printf("Target received: x=%d, y=%d\n", x, y);
-            if (instance->onNewWaypoint) {
-                instance->onNewWaypoint(x, y);
+            case EventType::WAYPOINT: {
+                int x = doc["x"];
+                int y = doc["y"];
+                Serial.printf("Target received: x=%d, y=%d\n", x, y);
+                if (instance->onNewWaypoint) {
+                    instance->onNewWaypoint(x, y);
+                }
+            }
+
+            case EventType::UNKNOWN: {
+                break;
             }
         }
     }
 }
 
-void ESPWebController::broadcastPosition(double x, double y) {
-    JsonDocument doc;
-    doc["x"] = (int)x;
-    doc["y"] = (int)y;
+void ESPWebController::broadcastInfo(JsonDocument infoJSON) {
     String output;
-    serializeJson(doc, output);
+    serializeJson(infoJSON, output);
     webSocket.broadcastTXT(output);
-}
-
-std::function<void(int)> onInitWidth;
-void setOnInitWidthCallback(std::function<void(int)> callback) {
-    onInitWidth = callback;
 }

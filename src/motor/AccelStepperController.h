@@ -2,7 +2,9 @@
 #define ACCEL_STEPPER_CONTROLLER_H
 
 #include <AccelStepper.h>
+#include <ArduinoJson.h>
 
+#include <queue>
 #include <sstream>
 #include <string>
 
@@ -13,19 +15,21 @@ class AccelStepperController {
     static constexpr int MM_PER_REV = 20;
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;
 
-    static constexpr int MAX_SPEED = 1000;  // Steps per sec
+    static constexpr int MAX_SPEED = 2000;  // Steps per sec
     static constexpr int ACCEL = 1000;
 
-    static constexpr int MAX_MM_CHANGE = 50;
+    static constexpr int MAX_MM_CHANGE = 10;
 
     AccelStepperController(
         int leftEn, int leftStep, int leftDir,
         int rightEn, int rightStep, int rightDir,
         double windowWidth, double botWidth);
 
-    void setWindowWidth(int w);
-    void begin();
-    void moveToPosition(double x, double y);
+    void begin(int windowWidth);
+
+    void enqueueTarget(double x, double y);
+
+    void next();
     void updateMovement();
     void stop();
 
@@ -53,15 +57,44 @@ class AccelStepperController {
         result = oss.str();
         return result.c_str();
     }
+    JsonDocument toJSON() const {
+        JsonDocument doc;
+
+        doc["timestamp"] = millis();
+
+        doc["moving"] = moving;
+        doc["currentX"] = currentX;
+        doc["currentY"] = currentY;
+        doc["targetX"] = targetX;
+        doc["targetY"] = targetY;
+        doc["moveToX"] = moveToX;
+        doc["moveToY"] = moveToY;
+        doc["xChange"] = xChange;
+        doc["yChange"] = yChange;
+
+        doc["currentLeft"] = currentLeft;
+        doc["currentRight"] = currentRight;
+        doc["leftMoveTo"] = leftMoveTo;
+        doc["rightMoveTo"] = rightMoveTo;
+
+        doc["leftMotorSpeed"] = leftMotorSpeed;
+        doc["rightMotorSpeed"] = rightMotorSpeed;
+
+        return doc;
+    }
 
    private:
     static AccelStepperController* instance;
     const int leftEn;
     const int rightEn;
-    const double windowWidth;
     const double botWidth;
+
     AccelStepper stepperLeft;
     AccelStepper stepperRight;
+
+    double windowWidth;
+
+    std::queue<std::pair<int, int>> targets;
 
     bool moving = false;
 
@@ -73,6 +106,8 @@ class AccelStepperController {
     double lastLeft = 0, lastRight = 0;        // Last
     double currentLeft = 0, currentRight = 0;  // Rope length, Unit: (mm)
     double leftMoveTo = 0, rightMoveTo = 0;
+
+    double leftMotorSpeed = 0, rightMotorSpeed = 0;
 };
 
 #endif

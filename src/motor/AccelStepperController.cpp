@@ -16,25 +16,21 @@ AccelStepperController::AccelStepperController(
       windowWidth(windowWidth),
       botWidth(botWidth) {
     instance = this;
-
-    // Calculate the correct X: Top left corner is (0,0)
-    currentX = botWidth / 2.0;
-
-    // Calculate the right rope length: Assume start top left
-    currentRight = windowWidth - botWidth;
 }
 
-void AccelStepperController::setWindowWidth(int w) {
-    this->windowWidth = w;
-}
-
-void AccelStepperController::begin() {
+void AccelStepperController::begin(int windowWidth) {
     // Enable motors
     pinMode(leftEn, OUTPUT);
     pinMode(rightEn, OUTPUT);
 
     digitalWrite(leftEn, LOW);
     digitalWrite(rightEn, LOW);
+
+    // Calculate the correct X: Top left corner is (0,0)
+    currentX = botWidth / 2.0;
+
+    // Calculate the right rope length: Assume start top left
+    currentRight = windowWidth - botWidth;
 
     // Stepper setup
     stepperLeft.setMaxSpeed(MAX_SPEED);
@@ -44,9 +40,25 @@ void AccelStepperController::begin() {
     stepperRight.setMaxSpeed(MAX_SPEED);
     stepperRight.setAcceleration(ACCEL);
     stepperRight.setCurrentPosition(currentRight * STEPS_PER_MM);
+
+    this->windowWidth = windowWidth;
+
+
 }
 
-void AccelStepperController::moveToPosition(double x, double y) {
+void AccelStepperController::enqueueTarget(double x, double y) {
+    targets.push(std::pair<int, int>(x, y));
+}
+
+void AccelStepperController::next() {
+    if (targets.empty()) return;
+
+    auto target = targets.front();
+    targets.pop();
+
+    double x = target.first;
+    double y = target.second;
+
     if (x < (botWidth / 2.0) || x > (windowWidth - botWidth / 2.0)) {
         x = currentX;
     }
@@ -76,16 +88,6 @@ void AccelStepperController::moveToPosition(double x, double y) {
     yChange = diffY * scale;
 
     moving = true;
-}
-
-void AccelStepperController::stop() {
-    moving = false;
-    stepperLeft.stop();
-    stepperRight.stop();
-}
-
-bool nearEqual(double a, double b, double eps = 0.01) {
-    return std::abs(a - b) < eps;
 }
 
 void AccelStepperController::updateMovement() {
@@ -155,10 +157,19 @@ void AccelStepperController::updateMovement() {
         double leftDir = (leftMoveTo >= lastLeft) ? 1.0 : -1.0;
         double rightDir = (rightMoveTo >= lastRight) ? 1.0 : -1.0;
 
-        stepperLeft.setSpeed(leftSpeed * leftDir);
-        stepperRight.setSpeed(rightSpeed * rightDir);
+        leftMotorSpeed = leftSpeed * leftDir;
+        rightMotorSpeed = rightSpeed * rightDir;
+
+        stepperLeft.setSpeed(leftMotorSpeed);
+        stepperRight.setSpeed(rightMotorSpeed);
     }
 
     stepperLeft.runSpeedToPosition();
     stepperRight.runSpeedToPosition();
+}
+
+void AccelStepperController::stop() {
+    moving = false;
+    stepperLeft.stop();
+    stepperRight.stop();
 }
