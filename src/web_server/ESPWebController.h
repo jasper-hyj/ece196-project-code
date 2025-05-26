@@ -8,6 +8,10 @@
 
 #include "../Direction.h"
 
+#include <queue>
+#include <utility>
+
+
 class ESPWebController {
 public:
     ESPWebController();
@@ -15,6 +19,12 @@ public:
     void update();
     const std::map<Direction, bool>& getDirectionMap() const {
         return direction;
+    }
+    
+    void broadcastPosition(double x, double y);
+
+    void setOnNewWaypointCallback(std::function<void(int, int)> cb) {
+        onNewWaypoint = cb;
     }
 
 private:
@@ -30,6 +40,10 @@ private:
     const char* password = "123456789";
     WiFiServer server{80};           // Initialize with port 80
     WebSocketsServer webSocket{81};  // WebSocket on port 81
+
+    std::queue<std::pair<int, int>> waypoints;
+    std::function<void(int, int)> onNewWaypoint = nullptr; // callback for main loop
+
 };
 
 #endif

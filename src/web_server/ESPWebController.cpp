@@ -1,5 +1,7 @@
 #include "ESPWebController.h"
 
+#include <ArduinoJson.h>
+
 #include "index_html.h"
 
 ESPWebController* ESPWebController::instance = nullptr;
@@ -79,12 +81,44 @@ void ESPWebController::handleCommand(const String& cmd, const String& state) {
 void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     if (type == WStype_TEXT && instance) {
         String json = (char*)payload;
-        int cmdIndex = json.indexOf("cmd\":\"");
-        int stateIndex = json.indexOf("state\":\"");
-        if (cmdIndex != -1 && stateIndex != -1) {
-            String cmd = json.substring(cmdIndex + 6, json.indexOf("\"", cmdIndex + 6));
-            String state = json.substring(stateIndex + 8, json.indexOf("\"", stateIndex + 8));
-            instance->handleCommand(cmd, state);
+
+        StaticJsonDocument<200> doc;
+        DeserializationError error = deserializeJson(doc, json);
+        if (error) {
+            Serial.println("Failed to parse WebSocket JSON");
+            return;
+        }
+
+        if (doc.containsKey("type") && doc["type"] == "init" && doc.containsKey("width")) {
+            int width = doc["width"];
+            Serial.printf("Received window width: %d mm\n", width);
+            if (instance->onInitWidth) {
+                instance->onInitWidth(width);
+            }
+            return;
+        }
+
+        if (doc.containsKey("x") && doc.containsKey("y")) {
+            int x = doc["x"];
+            int y = doc["y"];
+            Serial.printf("Target received: x=%d, y=%d\n", x, y);
+            if (instance->onNewWaypoint) {
+                instance->onNewWaypoint(x, y);
+            }
         }
     }
+}
+
+void ESPWebController::broadcastPosition(double x, double y) {
+    JsonDocument doc;
+    doc["x"] = (int)x;
+    doc["y"] = (int)y;
+    String output;
+    serializeJson(doc, output);
+    webSocket.broadcastTXT(output);
+}
+
+std::function<void(int)> onInitWidth;
+void setOnInitWidthCallback(std::function<void(int)> callback) {
+    onInitWidth = callback;
 }

@@ -1,5 +1,6 @@
 #include "AccelStepperController.h"
 
+#include <algorithm>
 #include <cmath>
 
 AccelStepperController* AccelStepperController::instance = nullptr;
@@ -7,17 +8,24 @@ AccelStepperController* AccelStepperController::instance = nullptr;
 AccelStepperController::AccelStepperController(
     int leftEn, int leftStep, int leftDir,
     int rightEn, int rightStep, int rightDir,
-    double windowsWidth, double botWidth)
+    double windowWidth, double botWidth)
     : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
       stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
       leftEn(leftEn),
       rightEn(rightEn),
-      windowsWidth(windowsWidth),
+      windowWidth(windowWidth),
       botWidth(botWidth) {
     instance = this;
 
+    // Calculate the correct X: Top left corner is (0,0)
     currentX = botWidth / 2.0;
-    rightLength = windowsWidth - botWidth;
+
+    // Calculate the right rope length: Assume start top left
+    currentRight = windowWidth - botWidth;
+}
+
+void AccelStepperController::setWindowWidth(int w) {
+    this->windowWidth = w;
 }
 
 void AccelStepperController::begin() {
@@ -31,96 +39,126 @@ void AccelStepperController::begin() {
     // Stepper setup
     stepperLeft.setMaxSpeed(MAX_SPEED);
     stepperLeft.setAcceleration(ACCEL);
-    stepperLeft.setCurrentPosition(0);
+    stepperLeft.setCurrentPosition(currentLeft * STEPS_PER_MM);
 
     stepperRight.setMaxSpeed(MAX_SPEED);
     stepperRight.setAcceleration(ACCEL);
-    stepperRight.setCurrentPosition(0);
-}
-
-double AccelStepperController::getCurrentX() {
-    return currentX;
-}
-
-double AccelStepperController::getCurrentY() {
-    return currentY;
-}
-
-double AccelStepperController::getCurrentLeftLength() {
-    return leftLength;
-}
-
-double AccelStepperController::getCurrentRightLength() {
-    return rightLength;
-}
-
-void AccelStepperController::move(Direction direction) {
-    switch (direction) {
-        case Direction::UP: {
-            moveToPosition(currentX, currentY - 10);
-            break;
-        }
-        case Direction::DOWN: {
-            moveToPosition(currentX, currentY + 10);
-            break;
-        }
-        case Direction::LEFT: {
-            moveToPosition(currentX - 10, currentY);
-            break;
-        }
-        case Direction::RIGHT: {
-            moveToPosition(currentX + 10, currentY);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+    stepperRight.setCurrentPosition(currentRight * STEPS_PER_MM);
 }
 
 void AccelStepperController::moveToPosition(double x, double y) {
-
-    if (x < (botWidth / 2.0) || x > (windowsWidth - botWidth / 2.0)) {
+    if (x < (botWidth / 2.0) || x > (windowWidth - botWidth / 2.0)) {
         x = currentX;
     }
-
     if (y < 0) {
         y = currentY;
     }
 
-    // Calculate X location
-    double leftX = x - (botWidth / 2.0);
-    double rightX = x + (botWidth / 2.0);
+    targetX = x;
+    targetY = y;
+    lastLeft = currentLeft;
+    lastRight = currentRight;
+    leftMoveTo = currentLeft;
+    rightMoveTo = currentRight;
+    moveToX = currentX;
+    moveToY = currentY;
 
-    // Calculate left/right length
-    double targetLeftLength = std::sqrt(std::pow(leftX, 2) + std::pow(y, 2));
-    double targetRightLength = std::sqrt(std::pow(windowsWidth - rightX, 2) + std::pow(y, 2));
+    double diffX = targetX - currentX;
+    double diffY = targetY - currentY;
 
-    
-    Serial.printf("Left Length: (%f to %f)\n ", leftLength, targetLeftLength);
-    Serial.printf("Right Length: (%f to %f)\n ", rightLength, targetRightLength);
+    double distance = std::sqrt(diffX * diffX + diffY * diffY);
+    if (distance == 0) {
+        moving = false;
+        return;
+    }
+    double scale = MAX_MM_CHANGE / distance;
+    xChange = diffX * scale;
+    yChange = diffY * scale;
 
-    // Find the length difference
-    long leftSteps = ((targetLeftLength - leftLength) / MM_PER_REV) * STEPS_PER_REV;
-    long rightSteps = ((targetRightLength - rightLength) / MM_PER_REV) * STEPS_PER_REV;
-
-    Serial.printf("Steps: (%d, %d)\n ", leftSteps, rightSteps);
-
-    stepperLeft.setCurrentPosition(0);
-    stepperRight.setCurrentPosition(0);
-    stepperLeft.moveTo(leftSteps);
-    stepperRight.moveTo(rightSteps);
-    runBoth();
-
-    leftLength = targetLeftLength;
-    rightLength = targetRightLength;
-    currentX = x;
-    currentY = y;
+    moving = true;
 }
 
-void AccelStepperController::runBoth() {
-    while (stepperLeft.distanceToGo() != 0 || stepperRight.distanceToGo() != 0) {
-        stepperLeft.run();
-        stepperRight.run();
+void AccelStepperController::stop() {
+    moving = false;
+    stepperLeft.stop();
+    stepperRight.stop();
+}
+
+bool nearEqual(double a, double b, double eps = 0.01) {
+    return std::abs(a - b) < eps;
+}
+
+void AccelStepperController::updateMovement() {
+    if (!moving) return;
+
+    // Find current left/right length
+    currentLeft = stepperLeft.currentPosition() / STEPS_PER_MM;
+    currentRight = stepperRight.currentPosition() / STEPS_PER_MM;
+
+    // Find current left/right coordinate
+    double xLeft = (std::pow(currentLeft, 2) - std::pow(currentRight, 2) + std::pow(windowWidth - botWidth, 2)) / (2 * (windowWidth - botWidth));
+    currentX = xLeft + botWidth / 2.0;
+    // Clamp to prevent sqrt of negative due to rounding errors
+    double ySquared = std::pow(currentLeft, 2) - std::pow(xLeft, 2);
+    currentY = std::sqrt(std::max(0.0, ySquared));
+
+    if (std::abs(stepperLeft.distanceToGo()) <= 1 && std::abs(stepperRight.distanceToGo()) <= 1) {  // If the moveTo haven't set to the final x
+        if (moveToX != targetX || moveToY != targetY) {
+            // Update moveToX based on nextX
+            double nextX = moveToX + xChange;
+            if ((xChange > 0 && nextX > targetX) || (xChange < 0 && nextX < targetX)) {
+                moveToX = targetX;
+            } else {
+                moveToX = nextX;
+            }
+
+            // Update moveToY based on nextY
+            double nextY = moveToY + yChange;
+            if ((yChange > 0 && nextY > targetY) || (yChange < 0 && nextY < targetY)) {
+                moveToY = targetY;
+            } else {
+                moveToY = nextY;
+            }
+
+            double leftMoveToX = moveToX - (botWidth / 2.0);   // x for left motor
+            double rightMoveToX = moveToX + (botWidth / 2.0);  // x for right motor
+
+            lastLeft = leftMoveTo;
+            lastRight = rightMoveTo;
+
+            leftMoveTo = std::sqrt(std::pow(leftMoveToX, 2) + std::pow(moveToY, 2));
+            rightMoveTo = std::sqrt(std::pow(windowWidth - rightMoveToX, 2) + std::pow(moveToY, 2));
+
+            stepperLeft.moveTo(leftMoveTo * STEPS_PER_MM);
+            stepperRight.moveTo(rightMoveTo * STEPS_PER_MM);
+        }
     }
+
+    if (moveToX == targetX && moveToY == targetY &&
+        std::abs(stepperLeft.distanceToGo()) <= 1 &&
+        std::abs(stepperRight.distanceToGo()) <= 1) {
+        moving = false;
+        return;
+    }
+
+    double deltaLeft = std::abs(leftMoveTo - lastLeft);
+    double deltaRight = std::abs(rightMoveTo - lastRight);
+    double maxDelta = std::max(deltaLeft, deltaRight);
+
+    if (maxDelta == 0) {
+        stepperLeft.setSpeed(0);
+        stepperRight.setSpeed(0);
+    } else {
+        double leftSpeed = (deltaLeft / maxDelta) * MAX_SPEED;
+        double rightSpeed = (deltaRight / maxDelta) * MAX_SPEED;
+
+        double leftDir = (leftMoveTo >= lastLeft) ? 1.0 : -1.0;
+        double rightDir = (rightMoveTo >= lastRight) ? 1.0 : -1.0;
+
+        stepperLeft.setSpeed(leftSpeed * leftDir);
+        stepperRight.setSpeed(rightSpeed * rightDir);
+    }
+
+    stepperLeft.runSpeedToPosition();
+    stepperRight.runSpeedToPosition();
 }

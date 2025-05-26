@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>2-Rope Robot Simulator (With Signed Speed & On-Rope Length)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+    }
+    canvas {
+      background: #3498db;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      touch-action: none;
+    }
+    #info {
+      margin-top: 15px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>2-Rope Robot Simulator</h1>
+  <canvas id="canvas" width="600" height="600"></canvas>
+  <div id="info">
+    <div>Left Rope Speed: <span id="leftSpeed">0</span> mm/s</div>
+    <div>Right Rope Speed: <span id="rightSpeed">0</span> mm/s</div>
+  </div>
+  <p>Click the canvas to move the robot.</p>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const realWidthMM = 1500;
+    const realHeightMM = 1500;
+    const botWidthMM = 279.39;
+    const canvasWidthPx = canvas.width;
+    const canvasHeightPx = canvas.height;
+
+    const scaleX = canvasWidthPx / realWidthMM;
+    const scaleY = canvasHeightPx / realHeightMM;
+
+    const botRadiusMM = 30;
+    const botRadiusPx = botRadiusMM * ((scaleX + scaleY) / 2);
+
+    const motorLeft = { x: 0, y: 0 };
+    const motorRight = { x: realWidthMM, y: 0 };
+
+    let botX = realWidthMM / 2;
+    let botY = realHeightMM / 2;
+    let targetX = botX;
+    let targetY = botY;
+
+    const moveSpeedMM = 5;
+
+    let prevLeftLength = null;
+    let prevRightLength = null;
+    let prevTimestamp = null;
+
+    function toCanvasCoords(p) {
+      return { x: p.x * scaleX, y: p.y * scaleY };
+    }
+
+    function getRopePoints(x, y) {
+      return {
+        leftRope: { x: x - botWidthMM / 2, y: y },
+        rightRope: { x: x + botWidthMM / 2, y: y }
+      };
+    }
+
+    function distance(a, b) {
+      return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+    }
+
+    function draw(leftLen, rightLen, leftSpeed, rightSpeed) {
+      ctx.clearRect(0, 0, canvasWidthPx, canvasHeightPx);
+
+      const motorLeftPx = toCanvasCoords(motorLeft);
+      const motorRightPx = toCanvasCoords(motorRight);
+      const ropes = getRopePoints(botX, botY);
+      const ropesPx = {
+        leftRope: toCanvasCoords(ropes.leftRope),
+        rightRope: toCanvasCoords(ropes.rightRope)
+      };
+
+      // Draw motors
+      ctx.fillStyle = "#000";
+      ctx.fillRect(motorLeftPx.x - 8, motorLeftPx.y - 8, 16, 16);
+      ctx.fillRect(motorRightPx.x - 8, motorRightPx.y - 8, 16, 16);
+
+      // Draw ropes
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(motorLeftPx.x, motorLeftPx.y);
+      ctx.lineTo(ropesPx.leftRope.x, ropesPx.leftRope.y);
+      ctx.moveTo(motorRightPx.x, motorRightPx.y);
+      ctx.lineTo(ropesPx.rightRope.x, ropesPx.rightRope.y);
+      ctx.stroke();
+
+      // Draw rope lengths next to the ropes
+      ctx.fillStyle = "#fff";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(
+        `Len: ${leftLen.toFixed(1)} mm`,
+        (motorLeftPx.x + ropesPx.leftRope.x) / 2 + 10,
+        (motorLeftPx.y + ropesPx.leftRope.y) / 2
+      );
+      ctx.textAlign = "right";
+      ctx.fillText(
+        `Len: ${rightLen.toFixed(1)} mm`,
+        (motorRightPx.x + ropesPx.rightRope.x) / 2 - 10,
+        (motorRightPx.y + ropesPx.rightRope.y) / 2
+      );
+
+      // Draw robot
+      ctx.fillStyle = "#c0392b";
+      ctx.beginPath();
+      const centerX = (ropesPx.leftRope.x + ropesPx.rightRope.x) / 2;
+      const centerY = ropesPx.leftRope.y;
+      const ellipseRadiusX = (ropesPx.rightRope.x - ropesPx.leftRope.x) / 2;
+      const ellipseRadiusY = botRadiusPx;
+      ctx.ellipse(centerX, centerY, ellipseRadiusX, ellipseRadiusY, 0, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Rope points
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(ropesPx.leftRope.x, ropesPx.leftRope.y, 6, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ropesPx.rightRope.x, ropesPx.rightRope.y, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Update rope speed text
+      document.getElementById("leftSpeed").textContent = leftSpeed.toFixed(2);
+      document.getElementById("rightSpeed").textContent = rightSpeed.toFixed(2);
+    }
+
+    function moveRobot() {
+      const dx = targetX - botX;
+      const dy = targetY - botY;
+      const dist = Math.sqrt(dx ** 2 + dy ** 2);
+
+      if (dist < moveSpeedMM) {
+        botX = targetX;
+        botY = targetY;
+      } else {
+        botX += (dx / dist) * moveSpeedMM;
+        botY += (dy / dist) * moveSpeedMM;
+      }
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const xPx = e.clientX - rect.left;
+      const yPx = e.clientY - rect.top;
+      const xMM = xPx / scaleX;
+      const yMM = yPx / scaleY;
+
+      // Clamp to canvas bounds
+      targetX = Math.max(botWidthMM / 2, Math.min(realWidthMM - botWidthMM / 2, xMM));
+      targetY = Math.max(0, Math.min(realHeightMM, yMM));
+    });
+
+    function animate(timestamp) {
+      if (!prevTimestamp) prevTimestamp = timestamp;
+
+      moveRobot();
+
+      const ropes = getRopePoints(botX, botY);
+      const leftLen = distance(motorLeft, ropes.leftRope);
+      const rightLen = distance(motorRight, ropes.rightRope);
+
+      const deltaTime = (timestamp - prevTimestamp) / 1000; // seconds
+      let leftSpeed = 0;
+      let rightSpeed = 0;
+
+      if (prevLeftLength !== null && deltaTime > 0) {
+        leftSpeed = (leftLen - prevLeftLength) / deltaTime;
+        rightSpeed = (rightLen - prevRightLength) / deltaTime;
+      }
+
+      prevLeftLength = leftLen;
+      prevRightLength = rightLen;
+      prevTimestamp = timestamp;
+
+      draw(leftLen, rightLen, leftSpeed, rightSpeed);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

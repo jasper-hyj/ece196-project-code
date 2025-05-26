@@ -1,123 +1,162 @@
-#ifndef INDEX_HTML_H
-#define INDEX_HTML_H
-
 const char index_html[] = R"rawliteral(
 <!DOCTYPE html>
 <html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 Touch Controller</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      margin-top: 20px;
-    }
-    .controller {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      grid-template-rows: 1fr 1fr 1fr;
-      gap: 10px;
-      width: 300px;
-      margin: 40px auto;
-      touch-action: none;
-    }
-    .btn {
-      background-color: #3498db;
-      color: white;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 12px;
-      padding: 20px;
-      user-select: none;
-      transition: background-color 0.2s;
-    }
-    .btn:active,
-    .btn.active {
-      background-color: #2980b9;
-    }
-    #auto {
-      width: 200px;
-      margin: 10px auto;
-      background-color: #e67e22;
-    }
-    #auto:active,
-    #auto.active {
-      background-color: #d35400;
-    }
-    button {
-      user-select: none;
-      -webkit-user-select: none;  /* Safari */
-      -ms-user-select: none;      /* IE 10+ */
-      touch-action: manipulation; /* Improves touch response */
-    }
-  </style>
-  <script>
-    let socket;
-
-    function sendWSCommand(cmd, state) {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ cmd: cmd, state: state }));
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Bot Controller</title>
+    <style>
+      body {
+        text-align: center;
+        font-family: sans-serif;
+        background-color: #f0f0f0;
       }
-    }
+      canvas {
+        background: #3498db;
+        border-radius: 16px;
+        margin-top: 20px;
+        touch-action: none;
+      }
+    </style>
+    <script>
+      let socket;
+      let canvas, ctx;
+      const size = 300;
+      let waypoints = [];
 
-    function registerButton(id, cmd, isToggle = false) {
-      const btn = document.getElementById(id);
-      btn.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        if (isToggle) {
-          btn.classList.toggle("active");
-          sendWSCommand(cmd, "toggle");
-        } else {
-          btn.classList.add("active");
-          sendWSCommand(cmd, "press");
+      // Bot position and movement state
+      let bot = { x: 0, y: 0 };
+      let currentTargetIndex = 0;
+      let moving = false;
+      let moveSpeed = 0.5; // units per frame (adjust for speed)
+      let dashOffset = 0;
+
+      function createGradientPath(points) {
+        // Create a path that goes through all given points (in canvas coords)
+        const path = new Path2D();
+        if (points.length === 0) return path;
+        path.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          path.lineTo(points[i].x, points[i].y);
         }
-      });
-      if (!isToggle) {
-        btn.addEventListener("pointerup", e => {
-          e.preventDefault();
-          btn.classList.remove("active");
-          sendWSCommand(cmd, "release");
-        });
-        btn.addEventListener("pointerleave", e => {
-          e.preventDefault();
-          btn.classList.remove("active");
-          sendWSCommand(cmd, "release");
-        });
+        return path;
       }
-    }
 
-    window.onload = () => {
-      socket = new WebSocket("ws://" + location.hostname + ":81");
-      registerButton("up", "up");
-      registerButton("down", "down");
-      registerButton("left", "left");
-      registerButton("right", "right");
-      registerButton("auto", "auto", true);
-    };
-  </script>
-</head>
-<body style="user-select: none;">
-  <h1>ESP32 Touch Controller</h1>
-  <div class="controller">
-    <div></div>
-    <button class="btn" id="up"><span style="user-select: none;">Up</span></button>
-    <div></div>
-    <button class="btn" id="left"><span style="user-select: none;">Left</span></button>
-    <div></div>
-    <button class="btn" id="right"><span style="user-select: none;">Right</span></button>
-    <div></div>
-    <button class="btn" id="down"><span style="user-select: none;">Down</span></button>
-    <div></div>
-  </div>
-  <button class="btn" id="auto">Auto Mode</button>
-</body>
+      function draw() {
+        ctx.clearRect(0, 0, size, size);
+
+        // Draw dotted path from current bot position to remaining waypoints
+        if (waypoints.length > 0 && currentTargetIndex < waypoints.length) {
+          const points = [];
+          points.push({ x: (bot.x / 100) * size, y: (bot.y / 100) * size });
+          for (let i = currentTargetIndex; i < waypoints.length; i++) {
+            points.push({
+              x: (waypoints[i].x / 100) * size,
+              y: (waypoints[i].y / 100) * size,
+            });
+          }
+
+          const path = createGradientPath(points); // still returns a Path2D
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#000000"; // solid black for contrast
+          ctx.setLineDash([6, 6]); // dashed pattern: 6px dash, 6px gap
+          ctx.lineDashOffset = -dashOffset; // animate dash offset for motion
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.stroke(path);
+          ctx.setLineDash([]); // reset dash after path is drawn
+        }
+
+        // Draw bot as a red circle
+        ctx.fillStyle = "#c0392b";
+        ctx.beginPath();
+        ctx.arc((bot.x / 100) * size, (bot.y / 100) * size, 8, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw arrow if moving
+        if (moving && currentTargetIndex < waypoints.length) {
+          const target = waypoints[currentTargetIndex];
+          const dx = target.x - bot.x;
+          const dy = target.y - bot.y;
+          const angle = Math.atan2(dy, dx);
+          const arrowLength = 16;
+          const arrowWidth = 6;
+          const startX = (bot.x / 100) * size;
+          const startY = (bot.y / 100) * size;
+          const tipX = startX + Math.cos(angle) * arrowLength;
+          const tipY = startY + Math.sin(angle) * arrowLength;
+          const leftX = startX + Math.cos(angle + Math.PI / 2) * arrowWidth;
+          const leftY = startY + Math.sin(angle + Math.PI / 2) * arrowWidth;
+          const rightX = startX + Math.cos(angle - Math.PI / 2) * arrowWidth;
+          const rightY = startY + Math.sin(angle - Math.PI / 2) * arrowWidth;
+
+          ctx.fillStyle = "#c0392b";
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY);
+          ctx.lineTo(leftX, leftY);
+          ctx.lineTo(rightX, rightY);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      function sendTarget(x, y) {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ x, y }));
+        } else {
+          console.warn("WebSocket not open yet, cannot send");
+        }
+      }
+
+      window.onload = () => {
+        canvas = document.getElementById("touchCanvas");
+        ctx = canvas.getContext("2d");
+
+        canvas.addEventListener("pointerdown", (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = Math.round(((e.clientX - rect.left) / size) * 100);
+          const y = Math.round(((e.clientY - rect.top) / size) * 100);
+          waypoints.push({ x, y });
+          sendTarget(x, y);
+          draw();
+        });
+
+        socket = new WebSocket("ws://" + location.hostname + ":81");
+
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.x !== undefined && data.y !== undefined) {
+            bot.x = data.x;
+            bot.y = data.y;
+            while (
+              currentTargetIndex < waypoints.length &&
+              Math.hypot(
+                waypoints[currentTargetIndex].x - bot.x,
+                waypoints[currentTargetIndex].y - bot.y
+              ) < 5
+            ) {
+              currentTargetIndex++;
+            }
+            draw();
+          }
+        };
+
+        // Animation loop
+        function animate() {
+          dashOffset = (dashOffset + 1) % 12; // animate dash movement
+          draw();
+          requestAnimationFrame(animate);
+        }
+
+        animate();
+        draw();
+      };
+    </script>
+  </head>
+  <body>
+    <h1>ESP32 Bot Controller</h1>
+    <canvas id="touchCanvas" width="300" height="300"></canvas>
+  </body>
 </html>
-)rawliteral";
 
-#endif
+)rawliteral";
