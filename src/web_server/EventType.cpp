@@ -7,6 +7,7 @@ const char* toString(EventType direction) {
 
         case EventType::INIT: return "INIT";
         case EventType::WAYPOINT: return "WAYPOINT";
+        case EventType::INFO: return "INFO";
         case EventType::UNKNOWN: return "UNKNOWN";
         default: return "INVALID";
     }
@@ -14,7 +15,8 @@ const char* toString(EventType direction) {
 
 std::map<std::string, EventType> eventTypeDict = {
     {"init", EventType::INIT},
-    {"waypoint", EventType::WAYPOINT}
+    {"waypoint", EventType::WAYPOINT},
+    {"info", EventType::INFO}
 };
 
 EventType getEventTypeEnum(const std::string& str) {

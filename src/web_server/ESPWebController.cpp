@@ -78,7 +78,17 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
     }
 }
 
+void ESPWebController::sendInit() {
+    JsonDocument doc;
+    doc["type"] = toString(EventType::INIT);
+
+    String output;
+    serializeJson(doc, output);
+    webSocket.broadcastTXT(output);
+}
+
 void ESPWebController::broadcastInfo(JsonDocument infoJSON) {
+    infoJSON["type"] = toString(EventType::INFO);
     String output;
     serializeJson(infoJSON, output);
     webSocket.broadcastTXT(output);

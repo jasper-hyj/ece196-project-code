@@ -42,21 +42,6 @@ class AccelStepperController {
 
     mutable std::string result;
 
-    const char* toString() {
-        std::ostringstream oss;
-        oss << "AccelStepper("
-            << "moving: " << (moving ? "true" : "false") << ", "
-            << "currentX: " << currentX << ", "
-            << "currentY: " << currentY << ", "
-            << "targetX: " << targetX << ", "
-            << "targetY: " << targetY << ", "
-            << "currentLeft: " << currentLeft << ", "
-            << "currentRight: " << currentRight << ", "
-            << "leftMoveTo: " << leftMoveTo << ", "
-            << "rightMoveTo: " << rightMoveTo << ")";
-        result = oss.str();
-        return result.c_str();
-    }
     JsonDocument toJSON() const {
         JsonDocument doc;
 
@@ -79,6 +64,18 @@ class AccelStepperController {
 
         doc["leftMotorSpeed"] = leftMotorSpeed;
         doc["rightMotorSpeed"] = rightMotorSpeed;
+
+        JsonArray wpArray = doc["waypoints"].to<JsonArray>();
+        std::queue<std::pair<int, int>> temp = targets;
+        while (!temp.empty()) {
+            const auto& front = temp.front();
+            int x = front.first;
+            int y = front.second;
+            JsonObject point = wpArray.add<JsonObject>();
+            point["x"] = x;
+            point["y"] = y;
+            temp.pop();
+        }
 
         return doc;
     }

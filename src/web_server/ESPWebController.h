@@ -17,6 +17,8 @@ class ESPWebController {
     void begin();
     void update();
 
+    void sendInit();
+
     void broadcastInfo(JsonDocument infoJSON);
 
     void setOnNewWaypointCallback(std::function<void(int, int)> cb) {

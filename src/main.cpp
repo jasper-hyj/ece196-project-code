@@ -14,6 +14,9 @@ static int windowWidth = 1000;  // default value
 static constexpr int windowHeight = 1000; // default value
 static constexpr int botWidth = 279.39;
 
+unsigned long lastInitRequestTime = 0;
+const unsigned long initRequestInterval = 2000;
+
 bool initialized = false;
 
 ESPWebController controller;
@@ -29,7 +32,6 @@ void setup() {
 
     controller.setOnInitCallback([](int width) {
         accelStepperController.begin(width);
-        Serial.printf("Window width set to: %d mm\n", width);
         initialized = true;
     });
 
@@ -41,14 +43,21 @@ void setup() {
 void loop() {
     controller.update();
 
+    if (!initialized) {
+        unsigned long now = millis();
+        if (now - lastInitRequestTime >= initRequestInterval) {
+            controller.sendInit();
+            lastInitRequestTime = now;
+        }
+        return;  // Skip movement logic until initialized
+    }
+
     if (initialized) {
         if (!accelStepperController.isMoving()) {
             accelStepperController.next();
         }
         accelStepperController.updateMovement();
-
+        
         controller.broadcastInfo(accelStepperController.toJSON());
-
-        Serial.printf("%s\n", accelStepperController.toString());
     }
 }

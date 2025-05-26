@@ -42,8 +42,6 @@ void AccelStepperController::begin(int windowWidth) {
     stepperRight.setCurrentPosition(currentRight * STEPS_PER_MM);
 
     this->windowWidth = windowWidth;
-
-
 }
 
 void AccelStepperController::enqueueTarget(double x, double y) {
