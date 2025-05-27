@@ -2,58 +2,75 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ESP32 Rope-Bot Controller</title>
     <style>
-      /* Reset & Base */
+      :root {
+        --primary-bg: #1e3c72;
+        --secondary-bg: #2a5298;
+        --panel-bg: rgba(255, 255, 255, 0.08);
+        --text-light: #ecf0f1;
+        --text-muted: #dcdde1;
+        --highlight: #f1c40f;
+        --success: #2ecc71;
+        --danger: #e74c3c;
+        --border-radius: 14px;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
       * {
         box-sizing: border-box;
       }
+
       body {
-        font-family: sans-serif;
+        font-family: "Segoe UI", sans-serif;
         margin: 0;
-        background: linear-gradient(135deg, #1e3c72, #2a5298);
-        color: #fff;
+        background: linear-gradient(
+          135deg,
+          var(--primary-bg),
+          var(--secondary-bg)
+        );
+        color: var(--text-light);
         display: flex;
         flex-direction: column;
         align-items: center;
         min-height: 100vh;
-        padding: 15px 10px 40px;
+        padding: 20px 12px 40px;
       }
 
       h1 {
-        font-size: 1.8rem;
-        margin: 15px 0 10px;
+        font-size: 2rem;
+        margin-bottom: 20px;
         text-align: center;
-        user-select: none;
+        font-weight: 700;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
       }
 
       #statusDisplay {
-        padding: 10px 18px;
-        border-radius: 10px;
+        padding: 12px 20px;
+        border-radius: var(--border-radius);
         font-weight: 600;
-        margin-bottom: 15px;
         width: 100%;
         max-width: 600px;
         text-align: center;
+        margin-bottom: 18px;
+        transition: background-color 0.3s, color 0.3s;
+        box-shadow: var(--shadow);
         user-select: none;
       }
 
       #statusDisplay.connected {
-        background-color: #2ecc71;
+        background-color: var(--success);
         color: #000;
       }
 
       #statusDisplay.disconnected {
-        background-color: #e74c3c;
+        background-color: var(--danger);
         color: #fff;
       }
 
       #statusDisplay.simulator {
-        background-color: #f1c40f;
+        background-color: var(--highlight);
         color: #222;
       }
 
@@ -63,9 +80,14 @@
         aspect-ratio: 1 / 1;
         border-radius: 20px;
         overflow: hidden;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
-        touch-action: none;
-        background: #ecf0f1;
+        box-shadow: var(--shadow);
+        background: #f5f6fa;
+        position: relative;
+        transition: transform 0.2s;
+      }
+
+      #canvasContainer:hover {
+        transform: scale(1.01);
       }
 
       canvas {
@@ -73,47 +95,24 @@
         width: 100%;
         height: 100%;
         border-radius: 20px;
-        touch-action: none;
-      }
-
-      #info {
-        max-width: 600px;
-        margin-top: 20px;
-        background: rgba(255, 255, 255, 0.12);
-        padding: 16px 22px;
-        border-radius: 14px;
-        font-size: 0.95rem;
-        width: 100%;
-        overflow-x: auto;
-        user-select: text;
-        line-height: 1.4;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      #info div {
-        margin-bottom: 6px;
       }
 
       p {
-        margin-top: 18px;
+        margin-top: 20px;
         text-align: center;
         font-size: 0.95rem;
-        color: #dcdde1;
+        color: var(--text-muted);
         user-select: none;
       }
 
       @media (max-width: 600px) {
         h1 {
-          font-size: 1.4rem;
+          font-size: 1.6rem;
         }
+
         #statusDisplay {
-          font-size: 0.9rem;
-          padding: 8px 14px;
-        }
-        #info {
-          font-size: 0.9rem;
-          padding: 14px 18px;
+          font-size: 0.95rem;
+          padding: 10px 16px;
         }
       }
     </style>
@@ -129,7 +128,6 @@
         aria-label="Rope-Bot controller canvas"
       ></canvas>
     </div>
-    <div id="info" aria-live="polite" aria-atomic="true"></div>
     <p>Tap or click on the canvas to set a waypoint.</p>
 
     <script>
@@ -278,6 +276,70 @@
           });
         }
 
+        drawMotors() {
+          const leftX =
+            this.info.accelStepper.currentX - this.info.botWidth / 2;
+          const rightX =
+            this.info.accelStepper.currentX + this.info.botWidth / 2;
+          const motorY = this.info.accelStepper.currentY;
+
+          const leftCanvasX = this.scaleX(leftX);
+          const rightCanvasX = this.scaleX(rightX);
+          const motorCanvasY = this.scaleY(motorY);
+
+          const leftSpeed = this.info.accelStepper.leftMotorSpeed;
+          const rightSpeed = this.info.accelStepper.rightMotorSpeed;
+
+          const currentLeft = this.info.accelStepper.currentLeft;
+          const currentRight = this.info.accelStepper.currentRight;
+
+          // Motor circle radius
+          const radius = 18;
+
+          const drawMotor = (x, y, speed, current, flip) => {
+            const angleOffset = !flip
+              ? ((current % 20) / 20.0) * 2 * Math.PI
+              : (-(current % 20) / 20.0) * 2 * Math.PI;
+
+            const absSpeed = Math.abs(speed);
+            const color =
+              absSpeed < 333
+                ? "#2ecc71"
+                : absSpeed < 666
+                ? "#f1c40f"
+                : "#e74c3c";
+
+            // Outer motor ring
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            this.ctx.fillStyle = "#333";
+            this.ctx.fill();
+
+            // Speed ring (rotating arc)
+            this.ctx.beginPath();
+            this.ctx.arc(
+              x,
+              y,
+              radius + 4,
+              angleOffset,
+              angleOffset + Math.PI / 1.5
+            );
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 4;
+            this.ctx.stroke();
+
+            // Speed text
+            this.ctx.fillStyle = "#fff";
+            this.ctx.font = "12px sans-serif";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText(`${speed.toFixed(0)}`, x, y);
+          };
+
+          drawMotor(leftCanvasX, motorCanvasY, leftSpeed, currentLeft, true);
+          drawMotor(rightCanvasX, motorCanvasY, rightSpeed, currentRight, false);
+        }
+
         draw() {
           // Clean up canvas
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -289,12 +351,12 @@
           this.drawBot();
 
           this.drawWaypoints();
+
+          this.drawMotors();
         }
 
         updateInfo(data) {
           this.info = data;
-          this.infoDiv.innerHTML = `<div><strong>Left Motor Speed</strong> = ${this.info.accelStepper.leftMotorSpeed}</div>
-          <div><strong>Right Motor Speed</strong> = ${this.info.accelStepper.rightMotorSpeed}</div>`;
         }
       }
 
@@ -303,7 +365,7 @@
           this.renderer = renderer;
           this.statusDisplay = statusDisplay;
           this.simInterval = null;
-          this.SIM_SPEED = 2.5;
+          this.SIM_SPEED = 1;
           this.info = {};
 
           this.waypoints = [];
@@ -322,7 +384,21 @@
         simulate() {
           this.info = this.renderer.info;
 
-          if (this.waypoints.length === 0) return;
+          // Before simulation step (store previous lengths)
+          const prevLeft = this.info.accelStepper.currentLeft;
+          const prevRight = this.info.accelStepper.currentRight;
+          const now = performance.now();
+          const dt = (now - (this.lastTimestamp || now)) / 1000; // seconds
+          this.lastTimestamp = now;
+
+          // Move bot toward target
+          if (this.waypoints.length === 0) {
+            this.info.accelStepper.leftMotorSpeed = 0;
+            this.info.accelStepper.rightMotorSpeed = 0;
+            this.renderer.updateInfo(this.info);
+            this.renderer.draw();
+            return;
+          }
 
           const target = this.waypoints[0];
 
@@ -340,20 +416,31 @@
             this.info.accelStepper.currentY += dy * ratio;
           }
 
+          // Recalculate rope lengths
           const leftX =
             this.info.accelStepper.currentX - this.info.botWidth / 2;
-
           const rightX =
             this.info.accelStepper.currentX + this.info.botWidth / 2;
 
-          this.info.accelStepper.currentLeft = Math.sqrt(
-            Math.pow(leftX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+          const currentLeft = Math.sqrt(
+            leftX * leftX +
+              this.info.accelStepper.currentY * this.info.accelStepper.currentY
           );
 
-          this.info.accelStepper.currentRight = Math.sqrt(
+          const currentRight = Math.sqrt(
             Math.pow(this.info.windowWidth - rightX, 2) +
               Math.pow(this.info.accelStepper.currentY, 2)
           );
+
+          // Motor speeds (in mm/s)
+          const leftSpeed = dt > 0 ? ((currentLeft - prevLeft) * 10) / dt : 0;
+          const rightSpeed =
+            dt > 0 ? ((currentRight - prevRight) * 10) / dt : 0;
+
+          this.info.accelStepper.currentLeft = currentLeft;
+          this.info.accelStepper.currentRight = currentRight;
+          this.info.accelStepper.leftMotorSpeed = leftSpeed;
+          this.info.accelStepper.rightMotorSpeed = rightSpeed;
 
           this.info.accelStepper.waypoints = this.waypoints;
 
