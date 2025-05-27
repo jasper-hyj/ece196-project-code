@@ -10,8 +10,8 @@ static constexpr int RIGHT_EN = 12;
 static constexpr int RIGHT_STEP = 11;
 static constexpr int RIGHT_DIR = 10;
 
-static int windowWidth = 1000;  // default value
-static constexpr int windowHeight = 1000; // default value
+static int windowWidth = 1000;             // default value
+static constexpr int windowHeight = 1000;  // default value
 static constexpr int botWidth = 279.39;
 
 unsigned long lastInitRequestTime = 0;
@@ -31,8 +31,11 @@ void setup() {
     controller.begin();
 
     controller.setOnInitCallback([](int width) {
-        accelStepperController.begin(width);
-        initialized = true;
+        if (!initialized) {
+            Serial.printf("main.cpp: Initializing: windowWidth=%d\n", width);
+            accelStepperController.begin(width);
+            initialized = true;
+        }
     });
 
     controller.setOnNewWaypointCallback([](double x, double y) {
@@ -42,22 +45,23 @@ void setup() {
 
 void loop() {
     controller.update();
+    JsonDocument json;
 
     if (!initialized) {
         unsigned long now = millis();
         if (now - lastInitRequestTime >= initRequestInterval) {
-            controller.sendInit();
+            Serial.printf("main.cpp: Request Init\n");
+            controller.send(EventType::INIT, &json);
             lastInitRequestTime = now;
         }
-        return;  // Skip movement logic until initialized
+        return;
     }
 
-    if (initialized) {
-        if (!accelStepperController.isMoving()) {
-            accelStepperController.next();
-        }
-        accelStepperController.updateMovement();
-        
-        controller.broadcastInfo(accelStepperController.toJSON());
+    if (!accelStepperController.isMoving()) {
+        accelStepperController.next();
     }
+    accelStepperController.updateMovement();
+
+    accelStepperController.toJSON(json);
+    controller.send(EventType::INFO, &json);
 }

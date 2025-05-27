@@ -1,6 +1,6 @@
 #include "ESPWebController.h"
 
-#include "index_html.h"
+#include <SPIFFS.h>
 
 ESPWebController* ESPWebController::instance = nullptr;
 
@@ -12,6 +12,11 @@ void ESPWebController::begin() {
     WiFi.softAP(ssid, password);
     Serial.print("Access Point IP: ");
     Serial.println(WiFi.softAPIP());
+
+    if (!SPIFFS.begin(true)) {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        return;
+    }
 
     server.begin();
     webSocket.begin();
@@ -32,14 +37,30 @@ void ESPWebController::update() {
 
 void ESPWebController::handleClientRequest(WiFiClient& client) {
     String request = client.readStringUntil('\r');
-    client.read();  // consume \n
+    client.read();
 
     if (request.indexOf("GET / ") >= 0) {
+        File file = SPIFFS.open("/index.html", "r");
+        if (!file) {
+            Serial.println("Failed to open /index.html");
+            client.println("HTTP/1.1 500 Internal Server Error");
+            client.println("Content-type:text/plain");
+            client.println("Connection: close");
+            client.println();
+            client.println("Failed to load index.html");
+            return;
+        }
+
         client.println("HTTP/1.1 200 OK");
         client.println("Content-type:text/html");
         client.println("Connection: close");
         client.println();
-        client.println(index_html);
+
+        while (file.available()) {
+            client.write(file.read());
+        }
+
+        file.close();
         client.println();
     }
 }
@@ -55,7 +76,7 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
         switch (eventType) {
             case EventType::INIT: {
                 int width = doc["width"];
-                Serial.printf("Received window width: %d mm\n", width);
+                Serial.printf("ESPWebController.cpp: Received window width: %d mm\n", width);
                 if (instance->onInit) {
                     instance->onInit(width);
                 }
@@ -65,10 +86,11 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
             case EventType::WAYPOINT: {
                 int x = doc["x"];
                 int y = doc["y"];
-                Serial.printf("Target received: x=%d, y=%d\n", x, y);
+                Serial.printf("ESPWebController.cpp: Target received: x=%d, y=%d\n", x, y);
                 if (instance->onNewWaypoint) {
                     instance->onNewWaypoint(x, y);
                 }
+                break;
             }
 
             case EventType::UNKNOWN: {
@@ -78,18 +100,13 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
     }
 }
 
-void ESPWebController::sendInit() {
-    JsonDocument doc;
-    doc["type"] = toString(EventType::INIT);
+void ESPWebController::send(EventType type, JsonDocument* json) {
+    (*json)["type"] = toString(type);
 
     String output;
-    serializeJson(doc, output);
-    webSocket.broadcastTXT(output);
-}
+    serializeJson(*json, output);
 
-void ESPWebController::broadcastInfo(JsonDocument infoJSON) {
-    infoJSON["type"] = toString(EventType::INFO);
-    String output;
-    serializeJson(infoJSON, output);
+    Serial.printf("ESPWebController.cpp: Send:%s\n", output);
+
     webSocket.broadcastTXT(output);
 }

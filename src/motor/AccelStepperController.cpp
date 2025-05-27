@@ -45,6 +45,7 @@ void AccelStepperController::begin(int windowWidth) {
 }
 
 void AccelStepperController::enqueueTarget(double x, double y) {
+    Serial.printf("AccelStepperController.cpp: Enqueued Target: x=%d, y=%d\n", x, y);
     targets.push(std::pair<int, int>(x, y));
 }
 

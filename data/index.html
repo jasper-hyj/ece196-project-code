@@ -7,10 +7,6 @@
       content="width=device-width, initial-scale=1, maximum-scale=1"
     />
     <title>ESP32 Rope-Bot Controller</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
     <style>
       /* Reset & Base */
       * {
@@ -159,7 +155,7 @@
 
       // Simulator vars
       let simInterval = null;
-      const SIM_SPEED = 4; // mm per frame (~60fps)
+      const SIM_SPEED = 2.5; // mm per frame (~60fps)
 
       // Scale millimeters to canvas pixels
       function scaleX(mm) {
@@ -271,22 +267,25 @@
       }
 
       // WebSocket connect & init
+      let reconnectTimeout = null;
+
       function connect() {
+        if (isConnected || reconnectTimeout) return;
+
         socket = new WebSocket("ws://" + location.hostname + ":81");
 
         socket.onopen = () => {
           statusDisplay.className = "connected";
           statusDisplay.textContent = "🟢 Connected to Bot";
           isConnected = true;
-
-          // Prompt for canvas size once connected
-          promptWindowSizeAndInit();
+          reconnectTimeout = null;
         };
 
         socket.onmessage = (event) => {
           const data = JSON.parse(event.data);
+          console.log(data);
+
           if (data.type == "info") {
-            // Update current position & config from server
             currentX = data.currentX ?? currentX;
             currentY = data.currentY ?? currentY;
             botWidthMM = data.botWidth ?? botWidthMM;
@@ -297,7 +296,7 @@
             updateInfo(data);
           }
 
-          if (data.type === "requestWindowSize") {
+          if (data.type === "init") {
             promptWindowSizeAndInit();
             return;
           }
@@ -306,20 +305,33 @@
         };
 
         socket.onclose = () => {
-          statusDisplay.className = "disconnected";
-          statusDisplay.textContent = "🔴 Not Connected";
+          if (isConnected) {
+            statusDisplay.className = "disconnected";
+            statusDisplay.textContent = "🔴 Disconnected - Retrying...";
+          }
+
           isConnected = false;
-          // Start simulator if disconnected
-          startSimulator();
+          scheduleReconnect();
         };
 
         socket.onerror = () => {
-          statusDisplay.className = "disconnected";
-          statusDisplay.textContent = "🔴 Connection Error";
+          if (isConnected) {
+            statusDisplay.className = "disconnected";
+            statusDisplay.textContent = "🔴 Connection Error - Retrying...";
+          }
+
           isConnected = false;
-          // Start simulator on error
-          startSimulator();
+          scheduleReconnect();
         };
+      }
+
+      function scheduleReconnect() {
+        if (!simInterval && !reconnectTimeout) {
+          reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            connect();
+          }, 2000); // retry every 2 seconds
+        }
       }
 
       // Prompt user for window size, send init message, start drawing
@@ -359,7 +371,6 @@
           windowWidthMM = parseFloat(widthPrompt);
           windowHeightMM = parseFloat(heightPrompt);
         }
-        motorRight.x = windowWidthMM;
 
         // Send init message to ESP32 server
         if (isConnected && socket && socket.readyState === WebSocket.OPEN) {
@@ -372,7 +383,13 @@
           );
         }
 
+        initialize();
+      }
+
+      function initialize() {
         isInitialized = true;
+
+        motorRight.x = windowWidthMM;
         currentX = windowWidthMM / 2;
         currentY = windowHeightMM / 2;
 
@@ -386,7 +403,10 @@
         statusDisplay.textContent = "🟡 Simulator Mode";
         isConnected = false;
 
-        promptWindowSizeAndInit();
+        windowWidthMM = 1500;
+        windowHeightMM = 1500;
+
+        initialize();
 
         if (simInterval) clearInterval(simInterval);
         simInterval = setInterval(() => {
@@ -424,7 +444,11 @@
       }
 
       window.onload = () => {
-        connect();
+        if (location.hostname == "192.168.4.1") {
+          connect();
+        } else {
+          startSimulator();
+        }
       };
 
       // Cleanup on unload

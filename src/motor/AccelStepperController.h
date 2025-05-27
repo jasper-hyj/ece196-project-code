@@ -42,11 +42,8 @@ class AccelStepperController {
 
     mutable std::string result;
 
-    JsonDocument toJSON() const {
-        JsonDocument doc;
-
+    void toJSON(JsonDocument& doc) const {
         doc["timestamp"] = millis();
-
         doc["moving"] = moving;
         doc["currentX"] = currentX;
         doc["currentY"] = currentY;
@@ -76,8 +73,6 @@ class AccelStepperController {
             point["y"] = y;
             temp.pop();
         }
-
-        return doc;
     }
 
    private:
