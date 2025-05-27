@@ -23,11 +23,11 @@ class AccelStepperController {
     AccelStepperController(
         int leftEn, int leftStep, int leftDir,
         int rightEn, int rightStep, int rightDir,
-        double windowWidth, double botWidth);
+        double botWidth);
 
     void begin(int windowWidth);
 
-    void enqueueTarget(double x, double y);
+    void enqueueWaypoint(double x, double y);
 
     void next();
     void updateMovement();
@@ -42,28 +42,32 @@ class AccelStepperController {
 
     mutable std::string result;
 
-    void toJSON(JsonDocument& doc) const {
-        doc["timestamp"] = millis();
-        doc["moving"] = moving;
-        doc["currentX"] = currentX;
-        doc["currentY"] = currentY;
-        doc["targetX"] = targetX;
-        doc["targetY"] = targetY;
-        doc["moveToX"] = moveToX;
-        doc["moveToY"] = moveToY;
-        doc["xChange"] = xChange;
-        doc["yChange"] = yChange;
+    void toJSON(JsonDocument& jsonDoc) const {
 
-        doc["currentLeft"] = currentLeft;
-        doc["currentRight"] = currentRight;
-        doc["leftMoveTo"] = leftMoveTo;
-        doc["rightMoveTo"] = rightMoveTo;
+        
+        JsonObject accelStepperJson = jsonDoc["accelStepper"].to<JsonObject>();
+        
+        accelStepperJson["timestamp"] = millis();
+        accelStepperJson["moving"] = moving;
+        accelStepperJson["currentX"] = currentX;
+        accelStepperJson["currentY"] = currentY;
+        accelStepperJson["targetX"] = targetX;
+        accelStepperJson["targetY"] = targetY;
+        accelStepperJson["moveToX"] = moveToX;
+        accelStepperJson["moveToY"] = moveToY;
+        accelStepperJson["xChange"] = xChange;
+        accelStepperJson["yChange"] = yChange;
 
-        doc["leftMotorSpeed"] = leftMotorSpeed;
-        doc["rightMotorSpeed"] = rightMotorSpeed;
+        accelStepperJson["currentLeft"] = currentLeft;
+        accelStepperJson["currentRight"] = currentRight;
+        accelStepperJson["leftMoveTo"] = leftMoveTo;
+        accelStepperJson["rightMoveTo"] = rightMoveTo;
 
-        JsonArray wpArray = doc["waypoints"].to<JsonArray>();
-        std::queue<std::pair<int, int>> temp = targets;
+        accelStepperJson["leftMotorSpeed"] = leftMotorSpeed;
+        accelStepperJson["rightMotorSpeed"] = rightMotorSpeed;
+
+        JsonArray wpArray = accelStepperJson["waypoints"].to<JsonArray>();
+        std::queue<std::pair<int, int>> temp = waypoints;
         while (!temp.empty()) {
             const auto& front = temp.front();
             int x = front.first;
@@ -86,7 +90,7 @@ class AccelStepperController {
 
     double windowWidth;
 
-    std::queue<std::pair<int, int>> targets;
+    std::queue<std::pair<int, int>> waypoints;
 
     bool moving = false;
 
@@ -95,11 +99,11 @@ class AccelStepperController {
     double targetX = 0, targetY = 0;    // Target position of bot, Unit: (mm)
     double xChange = 0, yChange = 0;    // Change per loop of bot, Unit: (mm)
 
-    double lastLeft = 0, lastRight = 0;        // Last
-    double currentLeft = 0, currentRight = 0;  // Rope length, Unit: (mm)
+    double lastLeft = 0, lastRight = 0;         // Last
+    double currentLeft = 0, currentRight = 0;   // Rope length, Unit: (mm)
     double leftMoveTo = 0, rightMoveTo = 0;
 
-    double leftMotorSpeed = 0, rightMotorSpeed = 0;
+    double leftMotorSpeed = 0, rightMotorSpeed = 0; // Speed: Unit (step/s)
 };
 
 #endif

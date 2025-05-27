@@ -5,11 +5,11 @@
 const char* toString(EventType direction) {
     switch (direction) {
 
-        case EventType::INIT: return "INIT";
-        case EventType::WAYPOINT: return "WAYPOINT";
-        case EventType::INFO: return "INFO";
-        case EventType::UNKNOWN: return "UNKNOWN";
-        default: return "INVALID";
+        case EventType::INIT: return "init";
+        case EventType::WAYPOINT: return "waypoint";
+        case EventType::INFO: return "info";
+        case EventType::UNKNOWN: return "unknown";
+        default: return "invalid";
     }
 }
 

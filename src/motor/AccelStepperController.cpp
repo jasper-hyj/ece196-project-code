@@ -7,13 +7,11 @@ AccelStepperController* AccelStepperController::instance = nullptr;
 
 AccelStepperController::AccelStepperController(
     int leftEn, int leftStep, int leftDir,
-    int rightEn, int rightStep, int rightDir,
-    double windowWidth, double botWidth)
-    : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
+    int rightEn, int rightStep, int rightDir, double botWidth
+    ) : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
       stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
       leftEn(leftEn),
       rightEn(rightEn),
-      windowWidth(windowWidth),
       botWidth(botWidth) {
     instance = this;
 }
@@ -44,16 +42,15 @@ void AccelStepperController::begin(int windowWidth) {
     this->windowWidth = windowWidth;
 }
 
-void AccelStepperController::enqueueTarget(double x, double y) {
+void AccelStepperController::enqueueWaypoint(double x, double y) {
     Serial.printf("AccelStepperController.cpp: Enqueued Target: x=%d, y=%d\n", x, y);
-    targets.push(std::pair<int, int>(x, y));
+    waypoints.push(std::pair<int, int>(x, y));
 }
 
 void AccelStepperController::next() {
-    if (targets.empty()) return;
+    if (waypoints.empty()) return;
 
-    auto target = targets.front();
-    targets.pop();
+    auto target = waypoints.front();
 
     double x = target.first;
     double y = target.second;
@@ -138,6 +135,7 @@ void AccelStepperController::updateMovement() {
     if (moveToX == targetX && moveToY == targetY &&
         std::abs(stepperLeft.distanceToGo()) <= 1 &&
         std::abs(stepperRight.distanceToGo()) <= 1) {
+        waypoints.pop();
         moving = false;
         return;
     }

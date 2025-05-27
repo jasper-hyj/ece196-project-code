@@ -133,332 +133,400 @@
     <p>Tap or click on the canvas to set a waypoint.</p>
 
     <script>
-      const canvas = document.getElementById("canvas");
-      const ctx = canvas.getContext("2d");
-      const statusDisplay = document.getElementById("statusDisplay");
-      const infoDiv = document.getElementById("info");
+      class CanvasRenderer {
+        constructor(canvas, infoDiv) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.info = {};
 
-      // Fixed motor positions (top-left and top-right corners)
-      const motorLeft = { x: 0, y: 0 };
-      let motorRight = { x: 1500, y: 0 };
+          this.info.botWidth = 279.39;
+          this.info.windowWidth = 1500;
+          this.info.windowHeight = 1500;
+          this.info.accelStepper = {};
 
-      let botWidthMM = 279.39;
-      let windowWidthMM;
-      let windowHeightMM;
+          this.info.accelStepper.currentX = this.info.windowWidth / 2;
+          this.info.accelStepper.currentY = this.info.windowHeight / 2;
+          this.info.accelStepper.waypoints = [];
 
-      let currentX, currentY;
-      let isInitialized = false;
-      let isConnected = false;
+          const leftX =
+            this.info.accelStepper.currentX - this.info.botWidth / 2;
 
-      let waypoints = [];
-      let socket = null;
+          const rightX =
+            this.info.accelStepper.currentX + this.info.botWidth / 2;
 
-      // Simulator vars
-      let simInterval = null;
-      const SIM_SPEED = 2.5; // mm per frame (~60fps)
+          this.info.accelStepper.currentLeft = Math.sqrt(
+            Math.pow(leftX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+          );
 
-      // Scale millimeters to canvas pixels
-      function scaleX(mm) {
-        return (mm / windowWidthMM) * canvas.width;
-      }
-      function scaleY(mm) {
-        return (mm / windowHeightMM) * canvas.height;
-      }
-
-      // Draw the rope-bot and ropes + future path
-      function draw() {
-        if (!isInitialized) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Draw ropes
-        const ropeLeft = { x: currentX - botWidthMM / 2, y: currentY };
-        const ropeRight = { x: currentX + botWidthMM / 2, y: currentY };
-
-        ctx.strokeStyle = "#00d2ff";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(scaleX(motorLeft.x), scaleY(motorLeft.y));
-        ctx.lineTo(scaleX(ropeLeft.x), scaleY(ropeLeft.y));
-        ctx.moveTo(scaleX(motorRight.x), scaleY(motorRight.y));
-        ctx.lineTo(scaleX(ropeRight.x), scaleY(ropeRight.y));
-        ctx.stroke();
-
-        // Draw bot ellipse
-        ctx.fillStyle = "#e67e22";
-        ctx.beginPath();
-        ctx.ellipse(
-          scaleX(currentX),
-          scaleY(currentY),
-          scaleX(botWidthMM / 2),
-          20,
-          0,
-          0,
-          2 * Math.PI
-        );
-        ctx.fill();
-
-        // Draw waypoints path with dashed lines
-        if (waypoints.length > 0) {
-          ctx.strokeStyle = "#8e44ad";
-          ctx.setLineDash([6, 6]);
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(scaleX(currentX), scaleY(currentY));
-          waypoints.forEach((wp) => ctx.lineTo(scaleX(wp.x), scaleY(wp.y)));
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        // Draw waypoints circles
-        ctx.fillStyle = "#8e44ad";
-        waypoints.forEach((wp) => {
-          ctx.beginPath();
-          ctx.arc(scaleX(wp.x), scaleY(wp.y), 8, 0, 2 * Math.PI);
-          ctx.fill();
-        });
-      }
-
-      // Add waypoint on canvas click/tap
-      canvas.addEventListener("pointerdown", (e) => {
-        if (!isInitialized) return;
-
-        // Only send if connected or simulator running
-        if (!isConnected && !simInterval) return;
-
-        const rect = canvas.getBoundingClientRect();
-        const xMM = ((e.clientX - rect.left) / rect.width) * windowWidthMM;
-        const yMM = ((e.clientY - rect.top) / rect.height) * windowHeightMM;
-
-        // Clamp x/y to window boundaries & bot width
-        const clampedX = Math.min(
-          Math.max(botWidthMM / 2, xMM),
-          windowWidthMM - botWidthMM / 2
-        );
-        const clampedY = Math.min(Math.max(0, yMM), windowHeightMM);
-
-        if (isConnected && socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(
-            JSON.stringify({ type: "waypoint", x: clampedX, y: clampedY })
+          this.info.accelStepper.currentRight = Math.sqrt(
+            Math.pow(this.info.windowWidth - rightX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
           );
         }
 
-        // Add locally for both connected & sim mode
-        waypoints.push({ x: clampedX, y: clampedY });
-        draw();
-      });
+        scaleX(mm) {
+          return (mm / this.info.windowWidth) * this.canvas.width;
+        }
 
-      // Update the info panel with data object
-      function updateInfo(data) {
-        const lines = [];
-        for (const key in data) {
-          if (Object.prototype.hasOwnProperty.call(data, key)) {
-            let value = data[key];
-            // Format waypoints array nicely
-            if (key === "waypoints" && Array.isArray(value)) {
-              value = value.length ? "\n  " + value.join("\n  ") : "None";
-              lines.push(`<div><strong>${key}</strong>:${value}</div>`);
-            } else {
-              lines.push(`<div><strong>${key}</strong>: ${value}</div>`);
+        scaleY(mm) {
+          return (mm / this.info.windowHeight) * this.canvas.height;
+        }
+
+        drawRope() {
+          const ropeLeft = {
+            x: this.info.accelStepper.currentX - this.info.botWidth / 2,
+            y: this.info.accelStepper.currentY,
+          };
+
+          const ropeRight = {
+            x: this.info.accelStepper.currentX + this.info.botWidth / 2,
+            y: this.info.accelStepper.currentY,
+          };
+
+          this.ctx.strokeStyle = "#00d2ff";
+          this.ctx.lineWidth = 4;
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, 0);
+          this.ctx.lineTo(this.scaleX(ropeLeft.x), this.scaleY(ropeLeft.y));
+
+          this.ctx.moveTo(this.scaleX(this.info.windowWidth), 0);
+          this.ctx.lineTo(this.scaleX(ropeRight.x), this.scaleY(ropeRight.y));
+          this.ctx.stroke(); // Draw it to canvas
+        }
+
+        drawRopeLengths() {
+          const ropeLeft = {
+            x: this.info.accelStepper.currentX - this.info.botWidth / 2,
+            y: this.info.accelStepper.currentY,
+          };
+
+          const ropeRight = {
+            x: this.info.accelStepper.currentX + this.info.botWidth / 2,
+            y: this.info.accelStepper.currentY,
+          };
+
+          this.ctx.fillStyle = "#596363";
+          this.ctx.font = "16px sans-serif";
+          this.ctx.textAlign = "left";
+          this.ctx.textBaseline = "middle";
+
+          const midLeftX = this.scaleX(ropeLeft.x) / 2;
+          const midLeftY = this.scaleY(ropeLeft.y) / 2;
+
+          const midRightX =
+            this.scaleX(this.info.windowWidth) -
+            (this.scaleX(this.info.windowWidth) - this.scaleX(ropeRight.x)) / 2;
+          const midRightY = this.scaleY(ropeRight.y) / 2;
+
+          this.ctx.fillText(
+            `${this.info.accelStepper.currentLeft.toFixed(1)} mm`,
+            midLeftX + 5,
+            midLeftY
+          );
+          this.ctx.fillText(
+            `${this.info.accelStepper.currentRight.toFixed(1)} mm`,
+            midRightX - 80,
+            midRightY
+          );
+        }
+
+        drawBot() {
+          this.ctx.fillStyle = "#e67e22";
+          this.ctx.beginPath();
+          this.ctx.ellipse(
+            this.scaleX(this.info.accelStepper.currentX),
+            this.scaleY(this.info.accelStepper.currentY),
+            this.scaleX(this.info.botWidth / 2),
+            20,
+            0,
+            0,
+            2 * Math.PI
+          );
+          this.ctx.fill();
+        }
+
+        drawWaypoints() {
+          if (this.info.accelStepper.waypoints.length > 0) {
+            this.ctx.strokeStyle = "#8e44ad";
+            this.ctx.setLineDash([6, 6]);
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.moveTo(
+              this.scaleX(this.info.accelStepper.currentX),
+              this.scaleY(this.info.accelStepper.currentY)
+            );
+            this.info.accelStepper.waypoints.forEach((wp) =>
+              this.ctx.lineTo(this.scaleX(wp.x), this.scaleY(wp.y))
+            );
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+          }
+
+          this.ctx.fillStyle = "#8e44ad";
+          this.info.accelStepper.waypoints.forEach((wp) => {
+            this.ctx.beginPath();
+            this.ctx.arc(
+              this.scaleX(wp.x),
+              this.scaleY(wp.y),
+              8,
+              0,
+              2 * Math.PI
+            );
+            this.ctx.fill();
+          });
+        }
+
+        draw() {
+          // Clean up canvas
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.drawRope();
+
+          this.drawRopeLengths();
+
+          this.drawBot();
+
+          this.drawWaypoints();
+        }
+
+        updateInfo(data) {
+          this.info = data;
+          console.log(this.info);
+        }
+      }
+
+      class RopeBotSimulator {
+        constructor(renderer, statusDisplay) {
+          this.renderer = renderer;
+          this.statusDisplay = statusDisplay;
+          this.simInterval = null;
+          this.SIM_SPEED = 2.5;
+          this.info = {};
+
+          this.waypoints = [];
+        }
+
+        start() {
+          this.statusDisplay.className = "simulator";
+          this.statusDisplay.textContent = "🟡 Simulator Mode";
+
+          if (this.simInterval) clearInterval(this.simInterval);
+
+          this.simInterval = setInterval(() => this.simulate(), 16);
+          this.renderer.draw();
+        }
+
+        simulate() {
+          this.info = this.renderer.info;
+
+          if (this.waypoints.length === 0) return;
+
+          const target = this.waypoints[0];
+
+          const dx = target.x - this.info.accelStepper.currentX;
+          const dy = target.y - this.info.accelStepper.currentY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < this.SIM_SPEED) {
+            this.info.accelStepper.currentX = target.x;
+            this.info.accelStepper.currentY = target.y;
+            this.waypoints.shift();
+          } else {
+            const ratio = this.SIM_SPEED / dist;
+            this.info.accelStepper.currentX += dx * ratio;
+            this.info.accelStepper.currentY += dy * ratio;
+          }
+
+          const leftX =
+            this.info.accelStepper.currentX - this.info.botWidth / 2;
+
+          const rightX =
+            this.info.accelStepper.currentX + this.info.botWidth / 2;
+
+          this.info.accelStepper.currentLeft = Math.sqrt(
+            Math.pow(leftX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+          );
+
+          this.info.accelStepper.currentRight = Math.sqrt(
+            Math.pow(this.info.windowWidth - rightX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+          );
+
+          this.info.accelStepper.waypoints = this.waypoints;
+
+          this.renderer.updateInfo(this.info);
+          this.renderer.draw();
+        }
+
+        addWayPoint(clientX, clientY) {
+          const rect = this.renderer.canvas.getBoundingClientRect();
+
+          const xMM =
+            ((clientX - rect.left) / rect.width) *
+            this.renderer.info.windowWidth;
+
+          const yMM =
+            ((clientY - rect.top) / rect.height) *
+            this.renderer.info.windowHeight;
+
+          const clampedX = Math.min(
+            Math.max(this.renderer.info.botWidth / 2, xMM),
+            this.renderer.info.windowWidth - this.renderer.info.botWidth / 2
+          );
+
+          const clampedY = Math.min(
+            Math.max(0, yMM),
+            this.renderer.info.windowHeight
+          );
+
+          this.waypoints.push({
+            x: clampedX,
+            y: clampedY,
+          });
+        }
+
+        stop() {
+          if (this.simInterval) clearInterval(this.simInterval);
+        }
+      }
+
+      class WebSocketHandler {
+        constructor(renderer, statusDisplay, simulator) {
+          this.renderer = renderer; // Canavs Renderer
+          this.statusDisplay = statusDisplay; // Display for connection status
+          this.socket = null; // Socket for websocket connection
+          this.reconnectTimeout = null; // Timeout timer
+        }
+
+        connect() {
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+
+          this.socket = new WebSocket("ws://" + location.hostname + ":81");
+
+          this.socket.onopen = () => {
+            this.statusDisplay.className = "connected";
+            this.statusDisplay.textContent = "🟢 Connected to Bot";
+          };
+
+          this.socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "init") {
+              this.promptWindowSize();
+            } else if (data.type === "info") {
+              this.renderer.updateInfo(data);
+              this.renderer.draw();
             }
+          };
+
+          this.socket.onclose = this.handleDisconnect.bind(this);
+          this.socket.onerror = this.handleDisconnect.bind(this);
+        }
+
+        handleDisconnect() {
+          this.statusDisplay.className = "disconnected";
+          this.statusDisplay.textContent = "🔴 Disconnected - Retrying...";
+          if (!this.reconnectTimeout) {
+            this.reconnectTimeout = setTimeout(() => {
+              this.reconnectTimeout = null;
+              this.connect();
+            }, 2000);
           }
         }
-        infoDiv.innerHTML = lines.join("");
-      }
 
-      // WebSocket connect & init
-      let reconnectTimeout = null;
+        addWayPoint(clientX, clientY) {
+          const rect = this.renderer.canvas.getBoundingClientRect();
 
-      function connect() {
-        if (isConnected || reconnectTimeout) return;
+          const xMM =
+            ((clientX - rect.left) / rect.width) *
+            this.renderer.info.windowWidth;
 
-        socket = new WebSocket("ws://" + location.hostname + ":81");
+          const yMM =
+            ((clientY - rect.top) / rect.height) *
+            this.renderer.info.windowHeight;
 
-        socket.onopen = () => {
-          statusDisplay.className = "connected";
-          statusDisplay.textContent = "🟢 Connected to Bot";
-          isConnected = true;
-          reconnectTimeout = null;
-        };
-
-        socket.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          console.log(data);
-
-          if (data.type == "info") {
-            currentX = data.currentX ?? currentX;
-            currentY = data.currentY ?? currentY;
-            botWidthMM = data.botWidth ?? botWidthMM;
-            windowWidthMM = data.windowWidth ?? windowWidthMM;
-            windowHeightMM = data.windowHeight ?? windowHeightMM;
-            motorRight.x = windowWidthMM;
-
-            updateInfo(data);
-          }
-
-          if (data.type === "init") {
-            promptWindowSizeAndInit();
-            return;
-          }
-
-          draw();
-        };
-
-        socket.onclose = () => {
-          if (isConnected) {
-            statusDisplay.className = "disconnected";
-            statusDisplay.textContent = "🔴 Disconnected - Retrying...";
-          }
-
-          isConnected = false;
-          scheduleReconnect();
-        };
-
-        socket.onerror = () => {
-          if (isConnected) {
-            statusDisplay.className = "disconnected";
-            statusDisplay.textContent = "🔴 Connection Error - Retrying...";
-          }
-
-          isConnected = false;
-          scheduleReconnect();
-        };
-      }
-
-      function scheduleReconnect() {
-        if (!simInterval && !reconnectTimeout) {
-          reconnectTimeout = setTimeout(() => {
-            reconnectTimeout = null;
-            connect();
-          }, 2000); // retry every 2 seconds
-        }
-      }
-
-      // Prompt user for window size, send init message, start drawing
-      function promptWindowSizeAndInit() {
-        let widthPrompt = null;
-        let heightPrompt = null;
-
-        // Loop prompt until valid numbers entered or cancel
-        while (true) {
-          widthPrompt = prompt(
-            "Enter canvas width in millimeters (e.g. 1500):",
-            "1500"
+          const clampedX = Math.min(
+            Math.max(this.renderer.info.botWidth / 2, xMM),
+            this.renderer.info.windowWidth - this.renderer.info.botWidth / 2
           );
-          if (widthPrompt === null) break;
-          heightPrompt = prompt(
-            "Enter canvas height in millimeters (e.g. 1500):",
-            "1500"
+
+          const clampedY = Math.min(
+            Math.max(0, yMM),
+            this.renderer.info.windowHeight
           );
-          if (heightPrompt === null) break;
 
-          if (
-            !isNaN(widthPrompt) &&
-            !isNaN(heightPrompt) &&
-            parseFloat(widthPrompt) > 0 &&
-            parseFloat(heightPrompt) > 0
-          ) {
-            break;
-          }
-          alert("Please enter valid positive numbers for width and height.");
-        }
-
-        if (!widthPrompt || !heightPrompt) {
-          alert("Canvas size is required. Using default 1500mm x 1500mm.");
-          windowWidthMM = 1500;
-          windowHeightMM = 1500;
-        } else {
-          windowWidthMM = parseFloat(widthPrompt);
-          windowHeightMM = parseFloat(heightPrompt);
-        }
-
-        // Send init message to ESP32 server
-        if (isConnected && socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(
+          this.socket.send(
             JSON.stringify({
-              type: "init",
-              width: windowWidthMM,
-              height: windowHeightMM,
+              type: "waypoint",
+              x: clampedX,
+              y: clampedY,
             })
           );
         }
 
-        initialize();
-      }
-
-      function initialize() {
-        isInitialized = true;
-
-        motorRight.x = windowWidthMM;
-        currentX = windowWidthMM / 2;
-        currentY = windowHeightMM / 2;
-
-        waypoints = [];
-        draw();
-      }
-
-      // Simulator mode with smooth waypoint movement
-      function startSimulator() {
-        statusDisplay.className = "simulator";
-        statusDisplay.textContent = "🟡 Simulator Mode";
-        isConnected = false;
-
-        windowWidthMM = 1500;
-        windowHeightMM = 1500;
-
-        initialize();
-
-        if (simInterval) clearInterval(simInterval);
-        simInterval = setInterval(() => {
-          if (waypoints.length === 0) return;
-
-          const target = waypoints[0];
-          const dx = target.x - currentX;
-          const dy = target.y - currentY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < SIM_SPEED) {
-            currentX = target.x;
-            currentY = target.y;
-            waypoints.shift();
-          } else {
-            const ratio = SIM_SPEED / dist;
-            currentX += dx * ratio;
-            currentY += dy * ratio;
+        promptWindowSize() {
+          let width, height;
+          while (true) {
+            width = prompt(
+              "Enter canvas width in millimeters (e.g. 1500):",
+              "1500"
+            );
+            if (width === null) return;
+            height = prompt(
+              "Enter canvas height in millimeters (e.g. 1500):",
+              "1500"
+            );
+            if (height === null) return;
+            if (!isNaN(width) && !isNaN(height) && +width > 0 && +height > 0)
+              break;
+            alert("Please enter valid positive numbers.");
           }
 
-          updateInfo({
-            simulator: true,
-            botWidth: botWidthMM.toFixed(1),
-            currentX: currentX.toFixed(1),
-            currentY: currentY.toFixed(1),
-            windowWidth: windowWidthMM.toFixed(1),
-            windowHeight: windowHeightMM.toFixed(1),
-            waypoints: waypoints.map(
-              (wp, i) => `#${i + 1}: (${wp.x.toFixed(1)}, ${wp.y.toFixed(1)})`
-            ),
-          });
-
-          draw();
-        }, 16); // ~60fps
+          if (this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(
+              JSON.stringify({
+                type: "init",
+                windowWidth: width,
+                windowHeight: height,
+              })
+            );
+          }
+        }
       }
 
       window.onload = () => {
-        if (location.hostname == "192.168.4.1") {
-          connect();
-        } else {
-          startSimulator();
-        }
-      };
+        const canvas = document.getElementById("canvas");
+        const statusDisplay = document.getElementById("statusDisplay");
+        const infoDiv = document.getElementById("info");
 
-      // Cleanup on unload
-      window.onbeforeunload = () => {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.close();
+        const renderer = new CanvasRenderer(canvas, infoDiv);
+        const simulator = new RopeBotSimulator(renderer, statusDisplay);
+        const wsHandler = new WebSocketHandler(
+          renderer,
+          statusDisplay,
+          simulator
+        );
+
+        canvas.addEventListener("pointerdown", (e) => {
+          if (location.hostname === "192.168.4.1") {
+            wsHandler.addWayPoint(e.clientX, e.clientY);
+          } else {
+            simulator.addWayPoint(e.clientX, e.clientY);
+          }
+        });
+
+        if (location.hostname === "192.168.4.1") {
+          wsHandler.connect();
+        } else {
+          simulator.start();
         }
-        if (simInterval) {
-          clearInterval(simInterval);
-        }
+
+        window.onbeforeunload = () => {
+          if (
+            wsHandler.socket &&
+            wsHandler.socket.readyState === WebSocket.OPEN
+          ) {
+            wsHandler.socket.close();
+          }
+          simulator.stop();
+        };
       };
     </script>
   </body>

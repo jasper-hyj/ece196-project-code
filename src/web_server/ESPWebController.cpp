@@ -75,10 +75,11 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 
         switch (eventType) {
             case EventType::INIT: {
-                int width = doc["width"];
-                Serial.printf("ESPWebController.cpp: Received window width: %d mm\n", width);
+                int windowWidth = doc["windowWidth"];
+                int windowHeight = doc["windowHeight"];
+                Serial.printf("ESPWebController.cpp: Received window width: %d mm, height: %d mm\n", windowWidth, windowHeight);
                 if (instance->onInit) {
-                    instance->onInit(width);
+                    instance->onInit(windowWidth, windowHeight);
                 }
                 break;
             }
@@ -106,7 +107,7 @@ void ESPWebController::send(EventType type, JsonDocument* json) {
     String output;
     serializeJson(*json, output);
 
-    Serial.printf("ESPWebController.cpp: Send:%s\n", output);
+    Serial.printf("ESPWebController.cpp: Send(%s)\n", output.c_str());
 
     webSocket.broadcastTXT(output);
 }

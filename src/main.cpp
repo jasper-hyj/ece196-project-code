@@ -11,7 +11,7 @@ static constexpr int RIGHT_STEP = 11;
 static constexpr int RIGHT_DIR = 10;
 
 static int windowWidth = 1000;             // default value
-static constexpr int windowHeight = 1000;  // default value
+static int windowHeight = 1000;             // default value
 static constexpr int botWidth = 279.39;
 
 unsigned long lastInitRequestTime = 0;
@@ -24,22 +24,26 @@ ESPWebController controller;
 AccelStepperController accelStepperController(
     LEFT_EN, LEFT_STEP, LEFT_DIR,
     RIGHT_EN, RIGHT_STEP, RIGHT_DIR,
-    windowWidth, botWidth);
+    botWidth);
 
 void setup() {
     Serial.begin(115200);
     controller.begin();
 
-    controller.setOnInitCallback([](int width) {
+    controller.setOnInitCallback([](int width, int height) {
         if (!initialized) {
             Serial.printf("main.cpp: Initializing: windowWidth=%d\n", width);
+
+            windowWidth = width;
+            windowHeight = height;
+
             accelStepperController.begin(width);
             initialized = true;
         }
     });
 
     controller.setOnNewWaypointCallback([](double x, double y) {
-        accelStepperController.enqueueTarget(x, y);
+        accelStepperController.enqueueWaypoint(x, y);
     });
 }
 
@@ -47,6 +51,7 @@ void loop() {
     controller.update();
     JsonDocument json;
 
+    // Check if initialized
     if (!initialized) {
         unsigned long now = millis();
         if (now - lastInitRequestTime >= initRequestInterval) {
@@ -57,11 +62,18 @@ void loop() {
         return;
     }
 
+    // Include basic information
+    json["botWidth"] = botWidth;
+    json["windowWidth"] = windowWidth;
+    json["windowHeight"] = windowHeight;
+
+    // AccelStepperController 
     if (!accelStepperController.isMoving()) {
         accelStepperController.next();
     }
     accelStepperController.updateMovement();
-
     accelStepperController.toJSON(json);
+
+    // Send information to frontend
     controller.send(EventType::INFO, &json);
 }

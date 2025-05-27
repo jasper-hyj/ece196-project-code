@@ -22,7 +22,7 @@ class ESPWebController {
     void setOnNewWaypointCallback(std::function<void(int, int)> cb) {
         onNewWaypoint = cb;
     }
-    void setOnInitCallback(std::function<void(int)> callback) {
+    void setOnInitCallback(std::function<void(int, int)> callback) {
         onInit = callback;
     }
 
@@ -39,7 +39,7 @@ class ESPWebController {
 
     std::queue<std::pair<int, int>> waypoints;
     std::function<void(int, int)> onNewWaypoint = nullptr;  // callback for main loop
-    std::function<void(int)> onInit;
+    std::function<void(int, int)> onInit;
 };
 
 #endif
