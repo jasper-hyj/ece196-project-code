@@ -75,6 +75,8 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 
         switch (eventType) {
             case EventType::INIT: {
+                Serial.printf("ESPWebController.cpp:(EventType::INIT) Check init\n");
+
                 if (instance->onInit) {
                     bool initialized = instance->onInit();
                     JsonDocument jsonDoc;
@@ -86,7 +88,7 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
             case EventType::SETUP: {
                 int windowWidth = doc["windowWidth"];
                 int windowHeight = doc["windowHeight"];
-                Serial.printf("ESPWebController.cpp: Received window width: %d mm, height: %d mm\n", windowWidth, windowHeight);
+                Serial.printf("ESPWebController.cpp:(EventType::SETUP) Received window width: %d mm, height: %d mm\n", windowWidth, windowHeight);
                 if (instance->onSetup) {
                     instance->onSetup(windowWidth, windowHeight);
                 }
@@ -95,7 +97,7 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
             case EventType::WAYPOINT: {
                 int x = doc["x"];
                 int y = doc["y"];
-                Serial.printf("ESPWebController.cpp: Target received: x=%d, y=%d\n", x, y);
+                Serial.printf("ESPWebController.cpp:(EventType::WAYPOINT) Target received: x=%d, y=%d\n", x, y);
                 if (instance->onNewWaypoint) {
                     instance->onNewWaypoint(x, y);
                 }
