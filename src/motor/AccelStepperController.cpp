@@ -7,12 +7,11 @@ AccelStepperController* AccelStepperController::instance = nullptr;
 
 AccelStepperController::AccelStepperController(
     int leftEn, int leftStep, int leftDir,
-    int rightEn, int rightStep, int rightDir, double botWidth
-    ) : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
-      stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
-      leftEn(leftEn),
-      rightEn(rightEn),
-      botWidth(botWidth) {
+    int rightEn, int rightStep, int rightDir, double botWidth) : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
+                                                                 stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
+                                                                 leftEn(leftEn),
+                                                                 rightEn(rightEn),
+                                                                 botWidth(botWidth) {
     instance = this;
 }
 
@@ -42,8 +41,8 @@ void AccelStepperController::begin(int windowWidth) {
     this->windowWidth = windowWidth;
 }
 
-void AccelStepperController::enqueueWaypoint(double x, double y) {
-    Serial.printf("AccelStepperController.cpp: Enqueued Target: x=%d, y=%d\n", x, y);
+void AccelStepperController::enqueueWaypoint(int x, int y) {
+    Serial.printf("AccelStepperController.cpp: Enqueued Target: x=%f, y=%f\n", x, y);
     waypoints.push(std::pair<int, int>(x, y));
 }
 

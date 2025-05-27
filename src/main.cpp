@@ -46,7 +46,7 @@ void setup() {
         }
     });
 
-    controller.setOnNewWaypointCallback([](double x, double y) {
+    controller.setOnNewWaypointCallback([](int x, int y) {
         accelStepperController.enqueueWaypoint(x, y);
     });
 }

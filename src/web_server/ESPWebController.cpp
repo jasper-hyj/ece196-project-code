@@ -80,7 +80,7 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                 if (instance->onInit) {
                     bool initialized = instance->onInit();
                     JsonDocument jsonDoc;
-                    jsonDoc["initialized"];
+                    jsonDoc["initialized"] = initialized;
                     instance->send(EventType::INIT, &jsonDoc);
                 }
                 break;
@@ -92,6 +92,7 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                 if (instance->onSetup) {
                     instance->onSetup(windowWidth, windowHeight);
                 }
+                break;
             }
 
             case EventType::WAYPOINT: {

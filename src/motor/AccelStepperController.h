@@ -27,7 +27,7 @@ class AccelStepperController {
 
     void begin(int windowWidth);
 
-    void enqueueWaypoint(double x, double y);
+    void enqueueWaypoint(int x, int y);
 
     void next();
     void updateMovement();
