@@ -11,11 +11,11 @@
 class AccelStepperController {
    public:
     // Constants
-    static constexpr int STEPS_PER_REV = 1600;  // 1/8 microstepping
+    static constexpr int STEPS_PER_REV = 200;
     static constexpr int MM_PER_REV = 20;
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;
 
-    static constexpr int MAX_SPEED = 2000;  // Steps per sec
+    static constexpr int MAX_SPEED = 1000;  // Unit: (step/s)
     static constexpr int ACCEL = 1000;
 
     static constexpr int MAX_MM_CHANGE = 10;
