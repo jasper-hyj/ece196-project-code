@@ -137,6 +137,8 @@
         constructor(canvas, infoDiv) {
           this.canvas = canvas;
           this.ctx = canvas.getContext("2d");
+          this.infoDiv = infoDiv;
+
           this.info = {};
 
           this.info.botWidth = 279.39;
@@ -159,7 +161,8 @@
           );
 
           this.info.accelStepper.currentRight = Math.sqrt(
-            Math.pow(this.info.windowWidth - rightX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+            Math.pow(this.info.windowWidth - rightX, 2) +
+              Math.pow(this.info.accelStepper.currentY, 2)
           );
         }
 
@@ -290,7 +293,8 @@
 
         updateInfo(data) {
           this.info = data;
-          console.log(this.info);
+          this.infoDiv.innerHTML = `<div><strong>Left Motor Speed</strong> = ${this.info.accelStepper.leftMotorSpeed}</div>
+          <div><strong>Right Motor Speed</strong> = ${this.info.accelStepper.rightMotorSpeed}</div>`;
         }
       }
 
@@ -347,7 +351,8 @@
           );
 
           this.info.accelStepper.currentRight = Math.sqrt(
-            Math.pow(this.info.windowWidth - rightX, 2) + Math.pow(this.info.accelStepper.currentY, 2)
+            Math.pow(this.info.windowWidth - rightX, 2) +
+              Math.pow(this.info.accelStepper.currentY, 2)
           );
 
           this.info.accelStepper.waypoints = this.waypoints;

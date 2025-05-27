@@ -107,7 +107,5 @@ void ESPWebController::send(EventType type, JsonDocument* json) {
     String output;
     serializeJson(*json, output);
 
-    Serial.printf("ESPWebController.cpp: Send(%s)\n", output.c_str());
-
     webSocket.broadcastTXT(output);
 }
