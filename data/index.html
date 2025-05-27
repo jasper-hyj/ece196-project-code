@@ -129,6 +129,7 @@
       ></canvas>
     </div>
     <p>Tap or click on the canvas to set a waypoint.</p>
+    <pre id="info"></pre>
 
     <script>
       class CanvasRenderer {
@@ -162,6 +163,8 @@
             Math.pow(this.info.windowWidth - rightX, 2) +
               Math.pow(this.info.accelStepper.currentY, 2)
           );
+
+          this.info.accelStepper.currentMid = 0;
         }
 
         scaleX(mm) {
@@ -235,9 +238,9 @@
           this.ctx.beginPath();
           this.ctx.ellipse(
             this.scaleX(this.info.accelStepper.currentX),
-            this.scaleY(this.info.accelStepper.currentY),
-            this.scaleX(this.info.botWidth / 2),
-            20,
+            this.scaleY(this.info.accelStepper.currentY + 10),
+            this.scaleX(this.info.botWidth / 2) * 1.5,
+            45,
             0,
             0,
             2 * Math.PI
@@ -287,14 +290,19 @@
           const rightCanvasX = this.scaleX(rightX);
           const motorCanvasY = this.scaleY(motorY);
 
+          const midCanvasX = this.scaleX(this.info.accelStepper.currentX);
+          const midCanvasY = this.scaleY(this.info.accelStepper.currentY + 40);
+
           const leftSpeed = this.info.accelStepper.leftMotorSpeed;
           const rightSpeed = this.info.accelStepper.rightMotorSpeed;
+          const midSpeed = this.info.accelStepper.midMotorSpeed;
 
           const currentLeft = this.info.accelStepper.currentLeft;
           const currentRight = this.info.accelStepper.currentRight;
+          const currentMid = this.info.accelStepper.currentMid;
 
           // Motor circle radius
-          const radius = 18;
+          const radius = 15;
 
           const drawMotor = (x, y, speed, current, flip) => {
             const angleOffset = !flip
@@ -303,9 +311,9 @@
 
             const absSpeed = Math.abs(speed);
             const color =
-              absSpeed < 333
+              absSpeed < 1000
                 ? "#2ecc71"
-                : absSpeed < 666
+                : absSpeed < 2000
                 ? "#f1c40f"
                 : "#e74c3c";
 
@@ -336,8 +344,9 @@
             this.ctx.fillText(`${speed.toFixed(0)}`, x, y);
           };
 
-          drawMotor(leftCanvasX, motorCanvasY, leftSpeed, currentLeft, true);
-          drawMotor(rightCanvasX, motorCanvasY, rightSpeed, currentRight, false);
+          drawMotor(leftCanvasX, motorCanvasY, leftSpeed, currentLeft, false);
+          drawMotor(rightCanvasX, motorCanvasY, rightSpeed, currentRight, true);
+          drawMotor(midCanvasX, midCanvasY, midSpeed, currentMid, false);
         }
 
         draw() {
@@ -357,6 +366,7 @@
 
         updateInfo(data) {
           this.info = data;
+          this.infoDiv.textContent = JSON.stringify(data, undefined, 2);
         }
       }
 
@@ -395,6 +405,7 @@
           if (this.waypoints.length === 0) {
             this.info.accelStepper.leftMotorSpeed = 0;
             this.info.accelStepper.rightMotorSpeed = 0;
+            this.info.accelStepper.midMotorSpeed = 0;
             this.renderer.updateInfo(this.info);
             this.renderer.draw();
             return;
@@ -432,15 +443,16 @@
               Math.pow(this.info.accelStepper.currentY, 2)
           );
 
-          // Motor speeds (in mm/s)
-          const leftSpeed = dt > 0 ? ((currentLeft - prevLeft) * 10) / dt : 0;
-          const rightSpeed =
-            dt > 0 ? ((currentRight - prevRight) * 10) / dt : 0;
+          // Motor speeds (in steps/s)
+          const leftSpeed = dt > 0 ? (currentLeft - prevLeft) / dt : 0;
+          const rightSpeed = dt > 0 ? (currentRight - prevRight) / dt : 0;
 
           this.info.accelStepper.currentLeft = currentLeft;
           this.info.accelStepper.currentRight = currentRight;
+          this.info.accelStepper.currentMid += dt * 300;
           this.info.accelStepper.leftMotorSpeed = leftSpeed;
           this.info.accelStepper.rightMotorSpeed = rightSpeed;
+          this.info.accelStepper.midMotorSpeed = 300;
 
           this.info.accelStepper.waypoints = this.waypoints;
 
@@ -577,12 +589,12 @@
           let width, height;
           while (true) {
             width = prompt(
-              "Enter canvas width in millimeters (e.g. 1500):",
+              "Enter window width in millimeters (e.g. 1500):",
               "1500"
             );
             if (width === null) return;
             height = prompt(
-              "Enter canvas height in millimeters (e.g. 1500):",
+              "Enter window height in millimeters (e.g. 1500):",
               "1500"
             );
             if (height === null) return;

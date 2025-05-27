@@ -10,6 +10,14 @@ static constexpr int RIGHT_EN = 12;
 static constexpr int RIGHT_STEP = 11;
 static constexpr int RIGHT_DIR = 10;
 
+static constexpr int MID_IN1 = 36;
+static constexpr int MID_IN2 = 48;
+static constexpr int MID_IN3 = 34;
+static constexpr int MID_IN4 = 47;
+
+static constexpr int MID_ENA = 35;
+static constexpr int MID_ENB = 33;
+
 static int windowWidth = 1000;             // default value
 static int windowHeight = 1000;             // default value
 static constexpr int botWidth = 279.39;
@@ -24,6 +32,7 @@ ESPWebController controller;
 AccelStepperController accelStepperController(
     LEFT_EN, LEFT_STEP, LEFT_DIR,
     RIGHT_EN, RIGHT_STEP, RIGHT_DIR,
+    MID_IN1, MID_IN2, MID_IN3, MID_IN4, MID_ENA, MID_ENB,
     botWidth);
 
 void setup() {
@@ -70,6 +79,7 @@ void loop() {
         accelStepperController.next();
     }
     accelStepperController.updateMovement();
+    accelStepperController.spinMid();
     accelStepperController.toJSON(json);
 
     // Send information to frontend
