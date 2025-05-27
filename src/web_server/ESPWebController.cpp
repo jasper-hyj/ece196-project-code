@@ -75,13 +75,21 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 
         switch (eventType) {
             case EventType::INIT: {
+                if (instance->onInit) {
+                    bool initialized = instance->onInit();
+                    JsonDocument jsonDoc;
+                    jsonDoc["initialized"];
+                    instance->send(EventType::INIT, &jsonDoc);
+                }
+                break;
+            }
+            case EventType::SETUP: {
                 int windowWidth = doc["windowWidth"];
                 int windowHeight = doc["windowHeight"];
                 Serial.printf("ESPWebController.cpp: Received window width: %d mm, height: %d mm\n", windowWidth, windowHeight);
-                if (instance->onInit) {
-                    instance->onInit(windowWidth, windowHeight);
+                if (instance->onSetup) {
+                    instance->onSetup(windowWidth, windowHeight);
                 }
-                break;
             }
 
             case EventType::WAYPOINT: {

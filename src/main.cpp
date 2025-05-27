@@ -30,7 +30,11 @@ void setup() {
     Serial.begin(115200);
     controller.begin();
 
-    controller.setOnInitCallback([](int width, int height) {
+    controller.setOnInitCallback([]() {
+        return initialized;
+    });
+
+    controller.setOnSetupCallback([](int width, int height) {
         if (!initialized) {
             Serial.printf("main.cpp: Initializing: windowWidth=%d\n", width);
 
@@ -53,12 +57,6 @@ void loop() {
 
     // Check if initialized
     if (!initialized) {
-        unsigned long now = millis();
-        if (now - lastInitRequestTime >= initRequestInterval) {
-            Serial.printf("main.cpp: Request Init\n");
-            controller.send(EventType::INIT, &json);
-            lastInitRequestTime = now;
-        }
         return;
     }
 

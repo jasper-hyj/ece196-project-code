@@ -421,11 +421,17 @@
             }
             this.statusDisplay.className = "connected";
             this.statusDisplay.textContent = "🟢 Connected to Bot";
+
+            this.socket.send(
+              JSON.stringify({
+                type: "init",
+              })
+            );
           };
 
           this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.type === "init") {
+            if (data.type === "init" && data.initialized === false) {
               this.promptWindowSize();
             } else if (data.type === "info") {
               this.renderer.updateInfo(data);
@@ -501,7 +507,7 @@
           if (this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(
               JSON.stringify({
-                type: "init",
+                type: "setup",
                 windowWidth: width,
                 windowHeight: height,
               })

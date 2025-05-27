@@ -6,6 +6,7 @@ const char* toString(EventType direction) {
     switch (direction) {
 
         case EventType::INIT: return "init";
+        case EventType::SETUP: return "setup";
         case EventType::WAYPOINT: return "waypoint";
         case EventType::INFO: return "info";
         case EventType::UNKNOWN: return "unknown";
@@ -15,6 +16,7 @@ const char* toString(EventType direction) {
 
 std::map<std::string, EventType> eventTypeDict = {
     {"init", EventType::INIT},
+    {"setup", EventType::SETUP},
     {"waypoint", EventType::WAYPOINT},
     {"info", EventType::INFO}
 };

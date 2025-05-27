@@ -19,12 +19,18 @@ class ESPWebController {
 
     void send(EventType type, JsonDocument* json);
 
-    void setOnNewWaypointCallback(std::function<void(int, int)> cb) {
-        onNewWaypoint = cb;
-    }
-    void setOnInitCallback(std::function<void(int, int)> callback) {
+    void setOnInitCallback(std::function<bool()> callback) {
         onInit = callback;
     }
+
+    void setOnSetupCallback(std::function<void(int, int)> callback) {
+        onSetup = callback;
+    }
+
+    void setOnNewWaypointCallback(std::function<void(int, int)> callback) {
+        onNewWaypoint = callback;
+    }
+    
 
    private:
     void handleClientRequest(WiFiClient& client);
@@ -39,7 +45,8 @@ class ESPWebController {
 
     std::queue<std::pair<int, int>> waypoints;
     std::function<void(int, int)> onNewWaypoint = nullptr;  // callback for main loop
-    std::function<void(int, int)> onInit;
+    std::function<bool()> onInit;
+    std::function<void(int, int)> onSetup;
 };
 
 #endif

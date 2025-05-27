@@ -5,6 +5,7 @@
 
 enum class EventType {
     INIT,
+    SETUP,
     WAYPOINT,
     INFO,
     UNKNOWN
