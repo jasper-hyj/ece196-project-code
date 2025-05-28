@@ -7,10 +7,14 @@
 constexpr int LEFT_EN = 9;
 constexpr int LEFT_STEP = 8;
 constexpr int LEFT_DIR = 7;
+constexpr int LEFT_UART_RX = 38;
+constexpr int LEFT_UART_TX = 37;
 
 constexpr int RIGHT_EN = 12;
 constexpr int RIGHT_STEP = 11;
 constexpr int RIGHT_DIR = 10;
+constexpr int RIGHT_UART_RX = 21;
+constexpr int RIGHT_UART_TX = 26;
 
 constexpr int MID_IN1 = 36;
 constexpr int MID_IN2 = 48;
@@ -31,8 +35,8 @@ bool initialized = false;
 ESPWebController webController;
 
 AccelStepperController accelStepperController(
-    LEFT_EN, LEFT_STEP, LEFT_DIR,
-    RIGHT_EN, RIGHT_STEP, RIGHT_DIR,
+    LEFT_EN, LEFT_STEP, LEFT_DIR, LEFT_UART_RX, LEFT_UART_TX,
+    RIGHT_EN, RIGHT_STEP, RIGHT_DIR, RIGHT_UART_RX, RIGHT_UART_TX,
     MID_IN1, MID_IN2, MID_IN3, MID_IN4, MID_ENA, MID_ENB,
     BOT_WIDTH);
 

@@ -6,14 +6,22 @@
 AccelStepperController* AccelStepperController::instance = nullptr;
 
 AccelStepperController::AccelStepperController(
-    int leftEn, int leftStep, int leftDir,
-    int rightEn, int rightStep, int rightDir,
+    int leftEn, int leftStep, int leftDir, int leftUartRx, int leftUartTx,
+    int rightEn, int rightStep, int rightDir, int rightUartRx, int rightUartTx,
     int midIn1, int midIn2, int midIn3, int midIn4, int midEnA, int midEnB,
     double botWidth)
-    : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
+    : SerialMotorLeft(1),
+      SerialMotorRight(2),
+      driverLeft(&SerialMotorLeft, R_SENSE, DRIVER_ADDRESS),
+      driverRight(&SerialMotorRight, R_SENSE, DRIVER_ADDRESS),
+      stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
       stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
       stepperMid(AccelStepper::FULL4WIRE, midIn1, midIn2, midIn3, midIn4),
       leftEn(leftEn),
+      leftUartRx(leftUartRx),
+      leftUartTx(leftUartTx),
+      rightUartRx(rightUartRx),
+      rightUartTx(rightUartTx),
       rightEn(rightEn),
       midEnA(midEnA),
       midEnB(midEnB),
@@ -22,26 +30,40 @@ AccelStepperController::AccelStepperController(
 }
 
 void AccelStepperController::begin() {
+    SerialMotorLeft.begin(115200, SERIAL_8N1, leftUartRx, leftUartTx);
+    SerialMotorRight.begin(115200, SERIAL_8N1, rightUartRx, rightUartTx);
+
+    driverLeft.begin();
+    driverLeft.toff(5);
+    driverLeft.rms_current(700);
+    driverLeft.microsteps(16);
+    driverLeft.en_spreadCycle(false);
+
+    driverRight.begin();
+    driverRight.toff(5);
+    driverRight.rms_current(700);
+    driverRight.microsteps(16);
+    driverRight.en_spreadCycle(false);
+
     pinMode(leftEn, OUTPUT);
     pinMode(rightEn, OUTPUT);
 
     digitalWrite(leftEn, LOW);
     digitalWrite(rightEn, LOW);
 
+    stepperLeft.setMaxSpeed(MAX_SPEED);
+    stepperLeft.setAcceleration(ACCEL);
+    stepperLeft.setMinPulseWidth(2);
+
+    stepperRight.setMaxSpeed(MAX_SPEED);
+    stepperRight.setAcceleration(ACCEL);
+    stepperLeft.setMinPulseWidth(2);
+
     pinMode(midEnA, OUTPUT);
     pinMode(midEnB, OUTPUT);
 
     analogWrite(midEnA, 255);
     analogWrite(midEnB, 255);
-
-    for (auto* stepper : {&stepperLeft, &stepperRight}) {
-        stepper->setMaxSpeed(MAX_SPEED);
-        stepper->setAcceleration(ACCEL);
-        stepper->setMinPulseWidth(2);
-    }
-
-    stepperLeft.setEnablePin(leftEn);
-    stepperRight.setEnablePin(rightEn);
 
     stepperMid.setMaxSpeed(MAX_SPEED);
     stepperMid.setAcceleration(ACCEL);
@@ -58,7 +80,7 @@ void AccelStepperController::setup(int windowWidth) {
     stepperLeft.setCurrentPosition(currentLeft * STEPS_PER_MM);
     stepperRight.setCurrentPosition(rightInversionFactor * currentRight * STEPS_PER_MM);
 
-    stepperMid.setCurrentPosition(0);
+    // stepperMid.setCurrentPosition(0);
     this->windowWidth = windowWidth;
 }
 

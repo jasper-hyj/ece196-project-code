@@ -1,20 +1,22 @@
 #ifndef ACCEL_STEPPER_CONTROLLER_H
 #define ACCEL_STEPPER_CONTROLLER_H
-#define M_PI           3.14159265358979323846
+#define M_PI 3.14159265358979323846
+#define R_SENSE 0.11f  // Sense resistor value for TMC2209
+#define DRIVER_ADDRESS 0b00
 
 #include <AccelStepper.h>
 #include <ArduinoJson.h>
+#include <TMCStepper.h>
 
 #include <queue>
 #include <sstream>
 #include <string>
 
-
 class AccelStepperController {
    public:
     // Constants
-    static constexpr int STEPS_PER_REV = 200;                        // Unit: (steps/rev)
-    static constexpr int MM_PER_REV = M_PI * 20.0;                            // Unit: (mm/rev)
+    static constexpr int STEPS_PER_REV = 3200;                       // Unit: (steps/rev)
+    static constexpr int MM_PER_REV = M_PI * 20.0;                   // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
     static constexpr int MAX_SPEED = 1000;    // Unit: (steps/s)
@@ -24,11 +26,11 @@ class AccelStepperController {
     static constexpr int RECALC_DIST = 14;  // Recalculate distance(mm)
 
     AccelStepperController(
-        int leftEn, int leftStep, int leftDir,
-        int rightEn, int rightStep, int rightDir,
+        int leftEn, int leftStep, int leftDir, int leftUartRx, int leftUartTx,
+        int rightEn, int rightStep, int rightDir, int rightUartRx, int rightUartTx,
         int midIn1, int midIn2, int midIn3, int midIn4, int midEnA, int midEnB,
         double botWidth);
-    
+
     void begin();
 
     void setup(int windowWidth);
@@ -41,11 +43,6 @@ class AccelStepperController {
     void stop();
 
     bool isMoving() const { return moving; }
-
-    double getCurrentX() const { return currentX; }
-    double getCurrentY() const { return currentY; }
-    double getTargetX() const { return targetX; }
-    double getTargetY() const { return targetY; }
 
     mutable std::string result;
 
@@ -96,7 +93,15 @@ class AccelStepperController {
    private:
     static AccelStepperController* instance;
 
-    int leftEn, rightEn, midEnA, midEnB;
+    const int leftEn, leftUartRx, leftUartTx;
+    const int rightEn, rightUartRx, rightUartTx;
+    const int midEnA, midEnB;
+
+    HardwareSerial SerialMotorLeft;
+    HardwareSerial SerialMotorRight;
+
+    TMC2209Stepper driverLeft;
+    TMC2209Stepper driverRight;
 
     AccelStepper stepperLeft;
     AccelStepper stepperRight;
