@@ -8,8 +8,12 @@
 #include <map>
 #include <queue>
 #include <utility>
+#include <string>
 
 #include "EventType.h"
+
+inline constexpr const char* WIFI_SSID = "ESP32-Team3-Access-Point";
+inline constexpr const char* WIFI_PASSWORD = "123456789";
 
 class ESPWebController {
    public:
@@ -17,7 +21,7 @@ class ESPWebController {
     void begin();
     void update();
 
-    void send(EventType type, JsonDocument* json);
+    void send(EventType type, std::function<void(JsonDocument&)> fill);
 
     void setOnInitCallback(std::function<bool()> callback) {
         onInit = callback;
@@ -38,8 +42,6 @@ class ESPWebController {
 
     static ESPWebController* instance;
 
-    const char* ssid = "ESP32-Team3-Access-Point";
-    const char* password = "123456789";
     WiFiServer server{80};           // Initialize with port 80
     WebSocketsServer webSocket{81};  // WebSocket on port 81
 

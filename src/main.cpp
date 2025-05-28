@@ -3,72 +3,68 @@
 #include "motor/AccelStepperController.h"
 #include "web_server/ESPWebController.h"
 
-static constexpr int LEFT_EN = 9;
-static constexpr int LEFT_STEP = 8;
-static constexpr int LEFT_DIR = 7;
-static constexpr int RIGHT_EN = 12;
-static constexpr int RIGHT_STEP = 11;
-static constexpr int RIGHT_DIR = 10;
+// Pin definition
+constexpr int LEFT_EN = 9;
+constexpr int LEFT_STEP = 8;
+constexpr int LEFT_DIR = 7;
 
-static constexpr int MID_IN1 = 36;
-static constexpr int MID_IN2 = 48;
-static constexpr int MID_IN3 = 34;
-static constexpr int MID_IN4 = 47;
+constexpr int RIGHT_EN = 12;
+constexpr int RIGHT_STEP = 11;
+constexpr int RIGHT_DIR = 10;
 
-static constexpr int MID_ENA = 35;
-static constexpr int MID_ENB = 33;
+constexpr int MID_IN1 = 36;
+constexpr int MID_IN2 = 48;
+constexpr int MID_IN3 = 34;
+constexpr int MID_IN4 = 47;
+constexpr int MID_ENA = 35;
+constexpr int MID_ENB = 33;
 
+// Dimensions
+constexpr int BOT_WIDTH = 279.39;
 static int windowWidth = 1000;   // default value
 static int windowHeight = 1000;  // default value
-static constexpr int botWidth = 279.39;
 
-unsigned long lastInitRequestTime = 0;
-const unsigned long initRequestInterval = 2000;
-
+// Initialize tracking
 bool initialized = false;
 
-ESPWebController controller;
+// Core components
+ESPWebController webController;
 
 AccelStepperController accelStepperController(
     LEFT_EN, LEFT_STEP, LEFT_DIR,
     RIGHT_EN, RIGHT_STEP, RIGHT_DIR,
     MID_IN1, MID_IN2, MID_IN3, MID_IN4, MID_ENA, MID_ENB,
-    botWidth);
+    BOT_WIDTH);
 
 void setup() {
     Serial.begin(115200);
 
-    pinMode(LEFT_EN, OUTPUT);
-    pinMode(RIGHT_EN, OUTPUT);
+    webController.begin();
+    accelStepperController.begin();
 
-    digitalWrite(LEFT_EN, HIGH);  // Disabled by default
-    digitalWrite(RIGHT_EN, HIGH);
-
-    controller.begin();
-
-    controller.setOnInitCallback([]() {
+    webController.setOnInitCallback([]() -> bool {
         return initialized;
     });
 
-    controller.setOnSetupCallback([](int width, int height) {
+    webController.setOnSetupCallback([](int width, int height) {
         if (!initialized) {
-            Serial.printf("main.cpp: Initializing: windowWidth=%d\n", width);
+            Serial.printf("main.cpp: Initializing: windowWidth=%d, windowHeight=%d\n", width, height);
 
             windowWidth = width;
             windowHeight = height;
 
-            accelStepperController.begin(width);
+            accelStepperController.setup(width);
             initialized = true;
         }
     });
 
-    controller.setOnNewWaypointCallback([](int x, int y) {
+    webController.setOnNewWaypointCallback([](int x, int y) {
         accelStepperController.enqueueWaypoint(x, y);
     });
 }
 
 void loop() {
-    controller.update();
+    webController.update();
     JsonDocument json;
 
     // Check if initialized
@@ -76,19 +72,18 @@ void loop() {
         return;
     }
 
-    // Include basic information
-    json["botWidth"] = botWidth;
-    json["windowWidth"] = windowWidth;
-    json["windowHeight"] = windowHeight;
-
-    // AccelStepperController
+    // Stepper Logic
     if (!accelStepperController.isMoving()) {
         accelStepperController.next();
     }
     accelStepperController.updateMovement();
     accelStepperController.spinMid();
-    accelStepperController.toJSON(json);
 
     // Send information to frontend
-    controller.send(EventType::INFO, &json);
+    webController.send(EventType::INFO, [&](JsonDocument& json) {
+        json["botWidth"] = BOT_WIDTH;
+        json["windowWidth"] = windowWidth;
+        json["windowHeight"] = windowHeight;
+        accelStepperController.toJSON(json);
+    });
 }

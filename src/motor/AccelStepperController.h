@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 
+
 class AccelStepperController {
    public:
     // Constants
@@ -27,8 +28,10 @@ class AccelStepperController {
         int rightEn, int rightStep, int rightDir,
         int midIn1, int midIn2, int midIn3, int midIn4, int midEnA, int midEnB,
         double botWidth);
+    
+    void begin();
 
-    void begin(int windowWidth);
+    void setup(int windowWidth);
 
     void enqueueWaypoint(int x, int y);
 
@@ -51,6 +54,12 @@ class AccelStepperController {
 
         accelStepperJson["timestamp"] = millis();
         accelStepperJson["moving"] = moving;
+
+        accelStepperJson["STEPS_PER_REV"] = STEPS_PER_REV;
+        accelStepperJson["MM_PER_REV"] = MM_PER_REV;
+        accelStepperJson["STEPS_PER_MM"] = STEPS_PER_MM;
+        accelStepperJson["MAX_SPEED"] = MAX_SPEED;
+
         accelStepperJson["currentX"] = currentX;
         accelStepperJson["currentY"] = currentY;
         accelStepperJson["targetX"] = targetX;
@@ -99,6 +108,8 @@ class AccelStepperController {
     std::queue<std::pair<int, int>> waypoints;
 
     bool moving = false;
+
+    const int rightInversionFactor = -1;
 
     double currentX = 0, currentY = 0;  // Current position of bot, Unit: (mm)
     double moveToX = 0, moveToY = 0;    // Move to position of bot, Unit: (mm)

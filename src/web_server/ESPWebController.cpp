@@ -9,7 +9,7 @@ ESPWebController::ESPWebController() {
 }
 
 void ESPWebController::begin() {
-    WiFi.softAP(ssid, password);
+    WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
     Serial.print("Access Point IP: ");
     Serial.println(WiFi.softAPIP());
 
@@ -56,6 +56,8 @@ void ESPWebController::handleClientRequest(WiFiClient& client) {
         client.println("Connection: close");
         client.println();
 
+        client.write(file);
+
         while (file.available()) {
             client.write(file.read());
         }
@@ -79,9 +81,9 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 
                 if (instance->onInit) {
                     bool initialized = instance->onInit();
-                    JsonDocument jsonDoc;
-                    jsonDoc["initialized"] = initialized;
-                    instance->send(EventType::INIT, &jsonDoc);
+                    instance->send(EventType::INIT, [&](JsonDocument& doc) {
+                        doc["initialized"] = initialized;
+                    });
                 }
                 break;
             }
@@ -105,18 +107,21 @@ void ESPWebController::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                 break;
             }
 
-            case EventType::UNKNOWN: {
+            default:
+                Serial.println("Received unknown event type");
                 break;
-            }
         }
     }
 }
 
-void ESPWebController::send(EventType type, JsonDocument* json) {
-    (*json)["type"] = toString(type);
+void ESPWebController::send(EventType type, std::function<void(JsonDocument&)> fill) {
+    JsonDocument doc;
+    fill(doc);
+    
+    doc["type"] = toString(type);
 
     String output;
-    serializeJson(*json, output);
+    serializeJson(doc, output);
 
     webSocket.broadcastTXT(output);
 }

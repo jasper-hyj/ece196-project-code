@@ -132,18 +132,24 @@
     <pre id="info"></pre>
 
     <script>
+      "use strict";
       class CanvasRenderer {
         constructor(canvas, infoDiv) {
           this.canvas = canvas;
           this.ctx = canvas.getContext("2d");
           this.infoDiv = infoDiv;
 
-          this.info = {};
-
-          this.info.botWidth = 279.39;
-          this.info.windowWidth = 1500;
-          this.info.windowHeight = 1500;
-          this.info.accelStepper = {};
+          this.info = {
+            botWidth: 279.39,
+            windowWidth: 1500,
+            windowHeight: 1500,
+            accelStepper: {
+              STEPS_PER_REV: 200,
+              MM_PER_REV: Math.PI * 20.0,
+              STEPS_PER_MM: 200 / (Math.PI * 20.0),
+              MAX_SPEED: 1000,
+            },
+          };
 
           this.info.accelStepper.currentX = this.info.windowWidth / 2;
           this.info.accelStepper.currentY = this.info.windowHeight / 2;
@@ -194,7 +200,7 @@
 
           this.ctx.moveTo(this.scaleX(this.info.windowWidth), 0);
           this.ctx.lineTo(this.scaleX(ropeRight.x), this.scaleY(ropeRight.y));
-          this.ctx.stroke(); // Draw it to canvas
+          this.ctx.stroke();
         }
 
         drawRopeLengths() {
@@ -234,7 +240,7 @@
         }
 
         drawBot() {
-          this.ctx.fillStyle = "#e67e22";
+          this.ctx.fillStyle = "#e67e22b0";
           this.ctx.beginPath();
           this.ctx.ellipse(
             this.scaleX(this.info.accelStepper.currentX),
@@ -305,15 +311,24 @@
           const radius = 15;
 
           const drawMotor = (x, y, speed, current, flip) => {
+            const scale = this.info.accelStepper.MM_PER_REV * 5;
+
             const angleOffset = !flip
-              ? ((current % 20) / 20.0) * 2 * Math.PI
-              : (-(current % 20) / 20.0) * 2 * Math.PI;
+              ? ((current % scale) / scale) * 2 * Math.PI
+              : (-(current % scale) / scale) * 2 * Math.PI;
 
             const absSpeed = Math.abs(speed);
             const color =
-              absSpeed < 1000
+              absSpeed <
+              this.info.accelStepper.MAX_SPEED /
+                this.info.accelStepper.STEPS_PER_MM /
+                3.0
                 ? "#2ecc71"
-                : absSpeed < 2000
+                : absSpeed <
+                  (this.info.accelStepper.MAX_SPEED /
+                    this.info.accelStepper.STEPS_PER_MM /
+                    3.0) *
+                    2.0
                 ? "#f1c40f"
                 : "#e74c3c";
 
@@ -357,9 +372,9 @@
 
           this.drawRopeLengths();
 
-          this.drawBot();
-
           this.drawWaypoints();
+
+          this.drawBot();
 
           this.drawMotors();
         }
@@ -375,7 +390,7 @@
           this.renderer = renderer;
           this.statusDisplay = statusDisplay;
           this.simInterval = null;
-          this.SIM_SPEED = 1;
+          this.SIM_SPEED = 5;
           this.info = {};
 
           this.waypoints = [];
@@ -415,7 +430,7 @@
 
           const dx = target.x - this.info.accelStepper.currentX;
           const dy = target.y - this.info.accelStepper.currentY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          const dist = Math.hypot(dx, dy);
 
           if (dist < this.SIM_SPEED) {
             this.info.accelStepper.currentX = target.x;
@@ -433,14 +448,14 @@
           const rightX =
             this.info.accelStepper.currentX + this.info.botWidth / 2;
 
-          const currentLeft = Math.sqrt(
-            leftX * leftX +
-              this.info.accelStepper.currentY * this.info.accelStepper.currentY
+          const currentLeft = Math.hypot(
+            leftX,
+            this.info.accelStepper.currentY
           );
 
-          const currentRight = Math.sqrt(
-            Math.pow(this.info.windowWidth - rightX, 2) +
-              Math.pow(this.info.accelStepper.currentY, 2)
+          const currentRight = Math.hypot(
+            this.info.windowWidth - rightX,
+            this.info.accelStepper.currentY
           );
 
           // Motor speeds (in steps/s)
@@ -449,10 +464,15 @@
 
           this.info.accelStepper.currentLeft = currentLeft;
           this.info.accelStepper.currentRight = currentRight;
-          this.info.accelStepper.currentMid += dt * 300;
+          this.info.accelStepper.currentMid +=
+            dt *
+            (this.info.accelStepper.MAX_SPEED /
+              this.info.accelStepper.STEPS_PER_MM);
           this.info.accelStepper.leftMotorSpeed = leftSpeed;
           this.info.accelStepper.rightMotorSpeed = rightSpeed;
-          this.info.accelStepper.midMotorSpeed = 300;
+          this.info.accelStepper.midMotorSpeed =
+            this.info.accelStepper.MAX_SPEED /
+            this.info.accelStepper.STEPS_PER_MM;
 
           this.info.accelStepper.waypoints = this.waypoints;
 
