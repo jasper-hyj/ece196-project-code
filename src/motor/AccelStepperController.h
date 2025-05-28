@@ -13,10 +13,10 @@ class AccelStepperController {
    public:
     // Constants
     static constexpr int STEPS_PER_REV = 200;                        // Unit: (steps/rev)
-    static constexpr int MM_PER_REV = M_PI * 20;                            // Unit: (mm/rev)
+    static constexpr int MM_PER_REV = M_PI * 20.0;                            // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
-    static constexpr int MAX_SPEED = 3000;    // Unit: (steps/s)
+    static constexpr int MAX_SPEED = 1000;    // Unit: (steps/s)
     static constexpr int ACCEL = 1000;        // Max acceleration, Unit: (steps/s²)
     static constexpr int MAX_MM_CHANGE = 15;  // Max displacement allow, Unit: (mm)
 

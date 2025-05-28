@@ -13,24 +13,24 @@ AccelStepperController::AccelStepperController(
     : stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
       stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
       stepperMid(AccelStepper::FULL4WIRE, midIn1, midIn2, midIn3, midIn4),
-      leftEn(leftEn), rightEn(rightEn), midEnA(midEnA), midEnB(midEnB),
+      leftEn(leftEn),
+      rightEn(rightEn),
+      midEnA(midEnA),
+      midEnB(midEnB),
       botWidth(botWidth) {
     instance = this;
 
     stepperLeft.setEnablePin(leftEn);
     stepperRight.setEnablePin(rightEn);
-
-    
 }
 
 void AccelStepperController::begin(int windowWidth) {
     // Enable motors
-    pinMode(leftEn, OUTPUT);
-    pinMode(rightEn, OUTPUT);
-
     digitalWrite(leftEn, LOW);
     digitalWrite(rightEn, LOW);
 
+    pinMode(midEnA, OUTPUT);
+    pinMode(midEnB, OUTPUT);
     analogWrite(midEnA, 255);
     analogWrite(midEnB, 255);
 
@@ -44,10 +44,12 @@ void AccelStepperController::begin(int windowWidth) {
     stepperLeft.setMaxSpeed(MAX_SPEED);
     stepperLeft.setAcceleration(ACCEL);
     stepperLeft.setCurrentPosition(currentLeft * STEPS_PER_MM);
+    stepperLeft.setMinPulseWidth(2);
 
     stepperRight.setMaxSpeed(MAX_SPEED);
     stepperRight.setAcceleration(ACCEL);
     stepperRight.setCurrentPosition((-1) * currentRight * STEPS_PER_MM);
+    stepperRight.setMinPulseWidth(2);
 
     stepperMid.setMaxSpeed(MAX_SPEED);
     stepperMid.setAcceleration(ACCEL);

@@ -18,8 +18,8 @@ static constexpr int MID_IN4 = 47;
 static constexpr int MID_ENA = 35;
 static constexpr int MID_ENB = 33;
 
-static int windowWidth = 1000;             // default value
-static int windowHeight = 1000;             // default value
+static int windowWidth = 1000;   // default value
+static int windowHeight = 1000;  // default value
 static constexpr int botWidth = 279.39;
 
 unsigned long lastInitRequestTime = 0;
@@ -37,6 +37,13 @@ AccelStepperController accelStepperController(
 
 void setup() {
     Serial.begin(115200);
+
+    pinMode(LEFT_EN, OUTPUT);
+    pinMode(RIGHT_EN, OUTPUT);
+
+    digitalWrite(LEFT_EN, HIGH);  // Disabled by default
+    digitalWrite(RIGHT_EN, HIGH);
+
     controller.begin();
 
     controller.setOnInitCallback([]() {
@@ -74,7 +81,7 @@ void loop() {
     json["windowWidth"] = windowWidth;
     json["windowHeight"] = windowHeight;
 
-    // AccelStepperController 
+    // AccelStepperController
     if (!accelStepperController.isMoving()) {
         accelStepperController.next();
     }
