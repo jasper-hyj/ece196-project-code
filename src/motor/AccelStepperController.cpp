@@ -22,7 +22,9 @@ AccelStepperController::AccelStepperController(
 }
 
 void AccelStepperController::begin() {
-    // Enable motors
+    pinMode(leftEn, OUTPUT);
+    pinMode(rightEn, OUTPUT);
+
     digitalWrite(leftEn, LOW);
     digitalWrite(rightEn, LOW);
 
@@ -39,7 +41,6 @@ void AccelStepperController::begin() {
     }
 
     stepperLeft.setEnablePin(leftEn);
-
     stepperRight.setEnablePin(rightEn);
 
     stepperMid.setMaxSpeed(MAX_SPEED);
@@ -176,16 +177,17 @@ void AccelStepperController::updateMovement() {
     leftMotorSpeed = (std::abs(stepperLeft.distanceToGo()) > 1) ? stepperLeft.speed() / STEPS_PER_MM : 0;
     rightMotorSpeed = (std::abs(stepperRight.distanceToGo()) > 1) ? stepperRight.speed() / STEPS_PER_MM : 0;
 
-    stepperLeft.runSpeedToPosition();
-    stepperRight.runSpeedToPosition();
-
     // If the moveTo is the target and the stepper is almost there (<= 1), set moving to false
     if (moveToX == targetX && moveToY == targetY &&
         std::abs(stepperLeft.distanceToGo()) <= 1 &&
         std::abs(stepperRight.distanceToGo()) <= 1) {
         waypoints.pop();
         moving = false;
+        return;
     }
+
+    stepperLeft.runSpeedToPosition();
+    stepperRight.runSpeedToPosition();
 }
 
 void AccelStepperController::spinMid() {

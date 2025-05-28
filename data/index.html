@@ -311,7 +311,7 @@
           const radius = 15;
 
           const drawMotor = (x, y, speed, current, flip) => {
-            const scale = this.info.accelStepper.MM_PER_REV * 5;
+            const scale = this.info.accelStepper.MM_PER_REV;
 
             const angleOffset = !flip
               ? ((current % scale) / scale) * 2 * Math.PI
