@@ -4,6 +4,8 @@
 #define R_SENSE 0.11f  // Sense resistor value for TMC2209
 #define DRIVER_ADDRESS 0b00
 
+#include "TMC2209Pin.h"
+#include "L298NPin.h"
 #include <AccelStepper.h>
 #include <ArduinoJson.h>
 #include <TMCStepper.h>
@@ -15,20 +17,24 @@
 class AccelStepperController {
    public:
     // Constants
-    static constexpr int STEPS_PER_REV = 3200;                       // Unit: (steps/rev)
+    static constexpr int RMS_CURRENT = 500;
+    static constexpr int MICROSTEPS = 2;
+    static constexpr bool SPREAD_CYCLE = true;
+    static constexpr int TOFF = 5;
+
+    static constexpr int STEPS_PER_REV = 200 * MICROSTEPS;                       // Unit: (steps/rev)
     static constexpr int MM_PER_REV = M_PI * 20.0;                   // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
-    static constexpr int MAX_SPEED = 1000;    // Unit: (steps/s)
-    static constexpr int ACCEL = 1000;        // Max acceleration, Unit: (steps/s²)
+    static constexpr int MAX_SPEED = 2000;    // Unit: (steps/s)
+    static constexpr int ACCEL = 500;        // Max acceleration, Unit: (steps/s²)
     static constexpr int MAX_MM_CHANGE = 15;  // Max displacement allow, Unit: (mm)
 
     static constexpr int RECALC_DIST = 14;  // Recalculate distance(mm)
 
     AccelStepperController(
-        int leftEn, int leftStep, int leftDir, int leftUartRx, int leftUartTx,
-        int rightEn, int rightStep, int rightDir, int rightUartRx, int rightUartTx,
-        int midIn1, int midIn2, int midIn3, int midIn4, int midEnA, int midEnB,
+        TMC2209Pin leftMotorPin, TMC2209Pin rightMotorPin,
+        L298NPin midMotorPin,
         double botWidth);
 
     void begin();
@@ -93,9 +99,8 @@ class AccelStepperController {
    private:
     static AccelStepperController* instance;
 
-    const int leftEn, leftUartRx, leftUartTx;
-    const int rightEn, rightUartRx, rightUartTx;
-    const int midEnA, midEnB;
+    const TMC2209Pin leftMotorPin, rightMotorPin;
+    const L298NPin midMotorPin;
 
     HardwareSerial SerialMotorLeft;
     HardwareSerial SerialMotorRight;

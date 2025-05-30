@@ -6,50 +6,44 @@
 AccelStepperController* AccelStepperController::instance = nullptr;
 
 AccelStepperController::AccelStepperController(
-    int leftEn, int leftStep, int leftDir, int leftUartRx, int leftUartTx,
-    int rightEn, int rightStep, int rightDir, int rightUartRx, int rightUartTx,
-    int midIn1, int midIn2, int midIn3, int midIn4, int midEnA, int midEnB,
+    TMC2209Pin leftMotorPin, TMC2209Pin rightMotorPin,
+    L298NPin midMotorPin,
     double botWidth)
-    : SerialMotorLeft(1),
+    : leftMotorPin(leftMotorPin),
+      rightMotorPin(rightMotorPin),
+      midMotorPin(midMotorPin),
+      SerialMotorLeft(1),
       SerialMotorRight(2),
       driverLeft(&SerialMotorLeft, R_SENSE, DRIVER_ADDRESS),
       driverRight(&SerialMotorRight, R_SENSE, DRIVER_ADDRESS),
-      stepperLeft(AccelStepper::DRIVER, leftStep, leftDir),
-      stepperRight(AccelStepper::DRIVER, rightStep, rightDir),
-      stepperMid(AccelStepper::FULL4WIRE, midIn1, midIn2, midIn3, midIn4),
-      leftEn(leftEn),
-      leftUartRx(leftUartRx),
-      leftUartTx(leftUartTx),
-      rightUartRx(rightUartRx),
-      rightUartTx(rightUartTx),
-      rightEn(rightEn),
-      midEnA(midEnA),
-      midEnB(midEnB),
+      stepperLeft(AccelStepper::DRIVER, leftMotorPin.step, leftMotorPin.dir),
+      stepperRight(AccelStepper::DRIVER, rightMotorPin.step, rightMotorPin.dir),
+      stepperMid(AccelStepper::FULL4WIRE, midMotorPin.in1, midMotorPin.in2, midMotorPin.in3, midMotorPin.in4),
       botWidth(botWidth) {
     instance = this;
 }
 
 void AccelStepperController::begin() {
-    SerialMotorLeft.begin(115200, SERIAL_8N1, leftUartRx, leftUartTx);
-    SerialMotorRight.begin(115200, SERIAL_8N1, rightUartRx, rightUartTx);
+    SerialMotorLeft.begin(115200, SERIAL_8N1, leftMotorPin.uart_rx, leftMotorPin.uart_tx);
+    SerialMotorRight.begin(115200, SERIAL_8N1, rightMotorPin.uart_rx, rightMotorPin.uart_tx);
 
     driverLeft.begin();
-    driverLeft.toff(5);
-    driverLeft.rms_current(700);
-    driverLeft.microsteps(16);
-    driverLeft.en_spreadCycle(false);
+    driverLeft.toff(TOFF);
+    driverLeft.rms_current(RMS_CURRENT);
+    driverLeft.microsteps(MICROSTEPS);
+    driverLeft.en_spreadCycle(SPREAD_CYCLE);
 
     driverRight.begin();
-    driverRight.toff(5);
-    driverRight.rms_current(700);
-    driverRight.microsteps(16);
-    driverRight.en_spreadCycle(false);
+    driverRight.toff(TOFF);
+    driverRight.rms_current(RMS_CURRENT);
+    driverRight.microsteps(MICROSTEPS);
+    driverRight.en_spreadCycle(SPREAD_CYCLE);
 
-    pinMode(leftEn, OUTPUT);
-    pinMode(rightEn, OUTPUT);
+    pinMode(leftMotorPin.en, OUTPUT);
+    pinMode(rightMotorPin.en, OUTPUT);
 
-    digitalWrite(leftEn, LOW);
-    digitalWrite(rightEn, LOW);
+    digitalWrite(leftMotorPin.en, LOW);
+    digitalWrite(rightMotorPin.en, LOW);
 
     stepperLeft.setMaxSpeed(MAX_SPEED);
     stepperLeft.setAcceleration(ACCEL);
@@ -59,11 +53,11 @@ void AccelStepperController::begin() {
     stepperRight.setAcceleration(ACCEL);
     stepperLeft.setMinPulseWidth(2);
 
-    pinMode(midEnA, OUTPUT);
-    pinMode(midEnB, OUTPUT);
+    pinMode(midMotorPin.enA, OUTPUT);
+    pinMode(midMotorPin.enB, OUTPUT);
 
-    analogWrite(midEnA, 255);
-    analogWrite(midEnB, 255);
+    analogWrite(midMotorPin.enA, 255);
+    analogWrite(midMotorPin.enB, 255);
 
     stepperMid.setMaxSpeed(MAX_SPEED);
     stepperMid.setAcceleration(ACCEL);

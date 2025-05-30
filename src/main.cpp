@@ -1,33 +1,16 @@
 #include <Arduino.h>
-
+#include "motor/TMC2209Pin.h"
+#include "motor/L298NPin.h"
 #include "motor/AccelStepperController.h"
+
 #include "web_server/ESPWebController.h"
 
 // Pin definition
-constexpr int LEFT_DIR = 2;
-constexpr int LEFT_STEP = 3;
-constexpr int LEFT_CLK = 4;
-constexpr int LEFT_UART_TX = 5;
-constexpr int LEFT_UART_RX = 6;
-constexpr int LEFT_MS2 = 7;
-constexpr int LEFT_MS1 = 8;
-constexpr int LEFT_EN = 9;
+constexpr TMC2209Pin leftStepperPin(9, 3, 2, 4, 6, 5, 8, 7);
 
-constexpr int RIGHT_DIR = 10;
-constexpr int RIGHT_STEP = 11;
-constexpr int RIGHT_CLK = 12;
-constexpr int RIGHT_UART_TX = 13;
-constexpr int RIGHT_UART_RX = 14;
-constexpr int RIGHT_MS2 = 15;
-constexpr int RIGHT_MS1 = 16;
-constexpr int RIGHT_EN = 17;
+constexpr TMC2209Pin rightStepperPin(17, 11, 10, 12,14, 13, 16, 15);
 
-constexpr int MID_IN1 = 36;
-constexpr int MID_IN2 = 48;
-constexpr int MID_IN3 = 34;
-constexpr int MID_IN4 = 47;
-constexpr int MID_ENA = 35;
-constexpr int MID_ENB = 33;
+constexpr L298NPin midStepperPin(35, 33, 36, 48, 34, 47);
 
 // Dimensions
 constexpr int BOT_WIDTH = 279.39;
@@ -41,9 +24,7 @@ bool initialized = false;
 ESPWebController webController;
 
 AccelStepperController accelStepperController(
-    LEFT_EN, LEFT_STEP, LEFT_DIR, LEFT_UART_RX, LEFT_UART_TX,
-    RIGHT_EN, RIGHT_STEP, RIGHT_DIR, RIGHT_UART_RX, RIGHT_UART_TX,
-    MID_IN1, MID_IN2, MID_IN3, MID_IN4, MID_ENA, MID_ENB,
+    leftStepperPin, rightStepperPin, midStepperPin,
     BOT_WIDTH);
 
 void setup() {
