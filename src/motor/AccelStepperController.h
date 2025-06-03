@@ -17,29 +17,29 @@
 class AccelStepperController {
    public:
     // Constants
-    static constexpr int RMS_CURRENT = 500;
-    static constexpr int MICROSTEPS = 2;
+    static constexpr int RMS_CURRENT = 700;
     static constexpr bool SPREAD_CYCLE = true;
     static constexpr int TOFF = 5;
+    static constexpr int MICROSTEPS = 16;
 
     static constexpr int STEPS_PER_REV = 200 * MICROSTEPS;                       // Unit: (steps/rev)
-    static constexpr int MM_PER_REV = M_PI * 20.0;                   // Unit: (mm/rev)
+    static constexpr int MM_PER_REV = 115;                   // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
-    static constexpr int MAX_SPEED = 2000;    // Unit: (steps/s)
+    static constexpr int MAX_SPEED = 1000;    // Unit: (steps/s)
     static constexpr int ACCEL = 500;        // Max acceleration, Unit: (steps/s²)
     static constexpr int MAX_MM_CHANGE = 15;  // Max displacement allow, Unit: (mm)
 
     static constexpr int RECALC_DIST = 14;  // Recalculate distance(mm)
 
     AccelStepperController(
-        TMC2209Pin leftMotorPin, TMC2209Pin rightMotorPin,
-        L298NPin midMotorPin,
+        TMC2209Pin leftMotorPin, TMC2209Pin rightMotorPin,  
+        L298NPin midMotorPin,   
         double botWidth);
 
     void begin();
 
-    void setup(int windowWidth);
+    void setup(int windowWidth, int windowHeight);
 
     void enqueueWaypoint(int x, int y);
 
@@ -113,7 +113,7 @@ class AccelStepperController {
     AccelStepper stepperMid;
 
     const double botWidth;
-    double windowWidth;
+    double windowWidth, windowHeight;
 
     std::queue<std::pair<int, int>> waypoints;
 

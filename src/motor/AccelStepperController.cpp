@@ -24,20 +24,20 @@ AccelStepperController::AccelStepperController(
 }
 
 void AccelStepperController::begin() {
-    SerialMotorLeft.begin(115200, SERIAL_8N1, leftMotorPin.uart_rx, leftMotorPin.uart_tx);
-    SerialMotorRight.begin(115200, SERIAL_8N1, rightMotorPin.uart_rx, rightMotorPin.uart_tx);
+    // SerialMotorLeft.begin(115200, SERIAL_8N1, leftMotorPin.uart_rx, leftMotorPin.uart_tx);
+    // SerialMotorRight.begin(115200, SERIAL_8N1, rightMotorPin.uart_rx, rightMotorPin.uart_tx);
 
-    driverLeft.begin();
-    driverLeft.toff(TOFF);
-    driverLeft.rms_current(RMS_CURRENT);
-    driverLeft.microsteps(MICROSTEPS);
-    driverLeft.en_spreadCycle(SPREAD_CYCLE);
+    // driverLeft.begin();
+    // driverLeft.toff(TOFF);
+    // driverLeft.rms_current(RMS_CURRENT);
+    // driverLeft.microsteps(MICROSTEPS);
+    // driverLeft.en_spreadCycle(SPREAD_CYCLE);
 
-    driverRight.begin();
-    driverRight.toff(TOFF);
-    driverRight.rms_current(RMS_CURRENT);
-    driverRight.microsteps(MICROSTEPS);
-    driverRight.en_spreadCycle(SPREAD_CYCLE);
+    // driverRight.begin();
+    // driverRight.toff(TOFF);
+    // driverRight.rms_current(RMS_CURRENT);
+    // driverRight.microsteps(MICROSTEPS);
+    // driverRight.en_spreadCycle(SPREAD_CYCLE);
 
     pinMode(leftMotorPin.en, OUTPUT);
     pinMode(rightMotorPin.en, OUTPUT);
@@ -63,19 +63,23 @@ void AccelStepperController::begin() {
     stepperMid.setAcceleration(ACCEL);
 }
 
-void AccelStepperController::setup(int windowWidth) {
-    // Calculate the correct X: Top left corner is (0,0)
-    currentX = botWidth / 2.0;
+void AccelStepperController::setup(int windowWidth, int windowHeight) {
+    // Calculate the correct X:  is (0,0)
+    currentX = windowWidth / 2.0;
+    currentY = windowHeight;
 
-    // Calculate the right rope length: Assume start top left
-    currentRight = windowWidth - botWidth;
+    // Calculate the right rope length: Assume bottom center
+    currentLeft = std::hypot(currentX - (botWidth / 2.0), currentY);
+    currentRight = std::hypot(windowWidth - currentX - (botWidth / 2.0), currentY);
 
     // Stepper setup
     stepperLeft.setCurrentPosition(currentLeft * STEPS_PER_MM);
     stepperRight.setCurrentPosition(rightInversionFactor * currentRight * STEPS_PER_MM);
 
-    // stepperMid.setCurrentPosition(0);
+    stepperMid.setCurrentPosition(0);
+
     this->windowWidth = windowWidth;
+    this->windowHeight = windowHeight;
 }
 
 void AccelStepperController::enqueueWaypoint(int x, int y) {

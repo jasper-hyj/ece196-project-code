@@ -13,7 +13,7 @@ constexpr TMC2209Pin rightStepperPin(17, 11, 10, 12,14, 13, 16, 15);
 constexpr L298NPin midStepperPin(35, 33, 36, 48, 34, 47);
 
 // Dimensions
-constexpr int BOT_WIDTH = 279.39;
+constexpr int BOT_WIDTH = 260;
 static int windowWidth = 1000;   // default value
 static int windowHeight = 1000;  // default value
 
@@ -30,8 +30,8 @@ AccelStepperController accelStepperController(
 void setup() {
     Serial.begin(115200);
 
-    webController.begin();
     accelStepperController.begin();
+    webController.begin();
 
     webController.setOnInitCallback([]() -> bool {
         return initialized;
@@ -44,7 +44,7 @@ void setup() {
             windowWidth = width;
             windowHeight = height;
 
-            accelStepperController.setup(width);
+            accelStepperController.setup(width, height);
             initialized = true;
         }
     });
