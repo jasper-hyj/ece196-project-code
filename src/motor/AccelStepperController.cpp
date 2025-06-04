@@ -12,10 +12,6 @@ AccelStepperController::AccelStepperController(
     : leftMotorPin(leftMotorPin),
       rightMotorPin(rightMotorPin),
       midMotorPin(midMotorPin),
-      SerialMotorLeft(1),
-      SerialMotorRight(2),
-      driverLeft(&SerialMotorLeft, R_SENSE, DRIVER_ADDRESS),
-      driverRight(&SerialMotorRight, R_SENSE, DRIVER_ADDRESS),
       stepperLeft(AccelStepper::DRIVER, leftMotorPin.step, leftMotorPin.dir),
       stepperRight(AccelStepper::DRIVER, rightMotorPin.step, rightMotorPin.dir),
       stepperMid(AccelStepper::FULL4WIRE, midMotorPin.in1, midMotorPin.in2, midMotorPin.in3, midMotorPin.in4),
@@ -24,21 +20,6 @@ AccelStepperController::AccelStepperController(
 }
 
 void AccelStepperController::begin() {
-    // SerialMotorLeft.begin(115200, SERIAL_8N1, leftMotorPin.uart_rx, leftMotorPin.uart_tx);
-    // SerialMotorRight.begin(115200, SERIAL_8N1, rightMotorPin.uart_rx, rightMotorPin.uart_tx);
-
-    // driverLeft.begin();
-    // driverLeft.toff(TOFF);
-    // driverLeft.rms_current(RMS_CURRENT);
-    // driverLeft.microsteps(MICROSTEPS);
-    // driverLeft.en_spreadCycle(SPREAD_CYCLE);
-
-    // driverRight.begin();
-    // driverRight.toff(TOFF);
-    // driverRight.rms_current(RMS_CURRENT);
-    // driverRight.microsteps(MICROSTEPS);
-    // driverRight.en_spreadCycle(SPREAD_CYCLE);
-
     pinMode(leftMotorPin.en, OUTPUT);
     pinMode(rightMotorPin.en, OUTPUT);
 
@@ -95,6 +76,7 @@ void AccelStepperController::next() {
 
     auto target = waypoints.front();
 
+    // Find Target X, Y
     double x = target.first;
     double y = target.second;
 

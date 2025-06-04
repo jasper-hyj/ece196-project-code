@@ -20,17 +20,18 @@ class AccelStepperController {
     static constexpr int RMS_CURRENT = 700;
     static constexpr bool SPREAD_CYCLE = true;
     static constexpr int TOFF = 5;
+
     static constexpr int MICROSTEPS = 16;
 
     static constexpr int STEPS_PER_REV = 200 * MICROSTEPS;                       // Unit: (steps/rev)
-    static constexpr int MM_PER_REV = 115;                   // Unit: (mm/rev)
+    static constexpr int MM_PER_REV = 150;                   // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
-    static constexpr int MAX_SPEED = 1000;    // Unit: (steps/s)
+    static constexpr int MAX_SPEED = 500;    // Unit: (steps/s)
     static constexpr int ACCEL = 500;        // Max acceleration, Unit: (steps/s²)
-    static constexpr int MAX_MM_CHANGE = 15;  // Max displacement allow, Unit: (mm)
+    static constexpr int MAX_MM_CHANGE = 10;  // Max displacement allow, Unit: (mm)
 
-    static constexpr int RECALC_DIST = 14;  // Recalculate distance(mm)
+    static constexpr int RECALC_DIST = 9;  // Recalculate distance(mm)
 
     AccelStepperController(
         TMC2209Pin leftMotorPin, TMC2209Pin rightMotorPin,  
@@ -101,12 +102,6 @@ class AccelStepperController {
 
     const TMC2209Pin leftMotorPin, rightMotorPin;
     const L298NPin midMotorPin;
-
-    HardwareSerial SerialMotorLeft;
-    HardwareSerial SerialMotorRight;
-
-    TMC2209Stepper driverLeft;
-    TMC2209Stepper driverRight;
 
     AccelStepper stepperLeft;
     AccelStepper stepperRight;
