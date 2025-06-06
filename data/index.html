@@ -129,7 +129,7 @@
       ></canvas>
     </div>
     <p>Tap or click on the canvas to set a waypoint.</p>
-    <!-- <pre id="info"></pre> -->
+    <pre id="info"></pre>
 
     <script>
       "use strict";
@@ -137,7 +137,7 @@
         constructor(canvas, infoDiv) {
           this.canvas = canvas;
           this.ctx = canvas.getContext("2d");
-          // this.infoDiv = infoDiv;
+          this.infoDiv = infoDiv;
 
           this.info = {
             botWidth: 279.39,
@@ -381,7 +381,7 @@
 
         updateInfo(data) {
           this.info = data;
-          // this.infoDiv.textContent = JSON.stringify(data, undefined, 2);
+          this.infoDiv.textContent = JSON.stringify(data, undefined, 2);
         }
       }
 

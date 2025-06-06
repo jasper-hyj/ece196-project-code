@@ -24,7 +24,7 @@ class AccelStepperController {
     static constexpr int MICROSTEPS = 16;
 
     static constexpr int STEPS_PER_REV = 200 * MICROSTEPS;                       // Unit: (steps/rev)
-    static constexpr int MM_PER_REV = 150;                   // Unit: (mm/rev)
+    static constexpr int MM_PER_REV = 200;                   // Unit: (mm/rev)
     static constexpr int STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // Unit: (steps/mm)
 
     static constexpr int MAX_SPEED = 500;    // Unit: (steps/s)
